@@ -1,23 +1,25 @@
 <!doctype html>
-<html>
+<html lang="en">
 
 <head>
     <title>Patch List</title>
-    <link rel="stylesheet" href="/print.css" media="print" />
-    <link rel="stylesheet" href="/web.css" />
+    <link rel="stylesheet" href="/print.css" media="print"/>
+    <link rel="stylesheet" href="/web.css"/>
 </head>
 
 <body>
-    <iframe src="/menu.html"></iframe>
+<iframe src="/menu.html"></iframe>
 
-    <div class="details">
-        <h1 id="title"></h1>
-        <textarea rows="10" placeholder="{{ OriginalFileName }}"></textarea>
-    </div>
+<div class="details">
+    <h1 id="title"></h1>
+    <textarea rows="10" placeholder="{{ OriginalFileName }}"></textarea>
+</div>
 
-    {% include 'input_patch.html' %} {% include 'output_patch.html' %}
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-    <script src="/web.js"></script>
+{% include 'input_patch.html' %}
+{% include 'output_patch.html' %}
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script src="/web.js"></script>
 </body>
 
 </html>
