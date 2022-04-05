@@ -1,7 +1,7 @@
 {% import 'util.html' as util %} {% for type in ['out', 'aux', 'aes', 'aes50a', 'aes50b', 'card', 'p16'] %}
 <table>
     <caption>{{TYPE_NAMES[type]}} Output Patch List
-        <input type="checkbox" class="togglesection" checked>
+        <input type="checkbox" class="togglesection" {{ 'checked' if parser.HasTypeAnythingAssigned(parser.GetOutputListForType(type)) }}>
     </caption>
     <thead>
         <tr>

@@ -1,7 +1,7 @@
 {% import 'util.html' as util %} {% for type in ['in', 'aes50a', 'aes50b', 'card'] %}
 <table>
     <caption>{{TYPE_NAMES[type]}} Input Patch List
-        <input type="checkbox" class="togglesection" {{ 'checked' if parser.HasTypeAnyChannelAssigned(type) }}>
+        <input type="checkbox" class="togglesection" {{ 'checked' if parser.HasTypeAnythingAssigned(parser.GetChannelListForType(type)) }}/>
     </caption>
     <thead>
         <tr>
@@ -33,4 +33,5 @@
         {% endfor %} {% endfor %}
     </tbody>
 </table>
+
 {%endfor%}

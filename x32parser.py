@@ -466,11 +466,11 @@ class ScnParser(object):
 
         return patch
 
-    def HasTypeAnyChannelAssigned(self, input_type):
+    def HasTypeAnythingAssigned(self, data_method):
         """
             Returns True if any of the contained channels contains information
         """
-        return len(list(filter(lambda row: row is not None, self.GetChannelListForType(input_type)))) > 0
+        return len(list(filter(lambda row: row is not None, data_method))) > 0
 
     def GetChannelListForType(self, input_type):
         """
