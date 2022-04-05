@@ -27,6 +27,9 @@ CONFIG_RE = re.compile(
 ROUTING_RE = re.compile(
     r'/config/routing/(IN|AES50A|AES50B|CARD|OUT)'
 )
+USERROUTING_RE = re.compile(
+    r'/config/userrout/(in|out)'
+)
 
 # main = outputs
 OUTPUTS_RE = re.compile(
@@ -39,6 +42,7 @@ INPUTS = ['ch', 'auxin']
 MAX_CHANNELS = {
     'aes50a': 48,
     'aes50b': 48,
+    'user-in': 48,
     'in': 40,
     'card': 32,
 }
@@ -46,6 +50,7 @@ MAX_CHANNELS = {
 MAX_OUTPUTS = {
     'aes50a': 48,
     'aes50b': 48,
+    'user-out': 48,
     'card': 32,
     'out': 16,
     'p16': 16,
@@ -66,6 +71,8 @@ B-18  ... - AES50B inputs
 OUT1-8 .. - Output Route (NOT XLR outputs)
 CARD1-8.. - Card channels
 P161-8 .. - P-16 Outputs
+UINT1-8.. - User inputs
+UOUT1-8.. - User outputs
 AUX/CR    - Aux 1-6 Channels + Control Room outs
 AUX/TB    - Aux 1-6 INPUTS from back of X32 + Talkback
 
@@ -90,14 +97,41 @@ Source Numbers:
         66-73 - Effects 1-4
         74-75 - Monitor Left, Right, Talkback
 
+    ---
+
+    Inputs for User Routing IN:
+        0       -   OFF
+        1-32    -   Local In 1-32
+        33-80   -   AES50-A 1-48
+        81-128  -   AES50-B 1-48
+        129-160 -   Card In 1-32
+        161-166 -   Aux In 1-6
+        167     -   TB Internal
+        168     -   TB External
+
+    Outputs for User Routing OUT:
+        0       -   OFF
+        1-32    -   Local In 1-32
+        33-80   -   AES50-A 1-48
+        81-128  -   AES50-B 1-48
+        129-160 -   Card In 1-32
+        161-166 -   Aux In 1-6
+        167     -   TB Internal
+        168     -   TB External
+        169-184 -   Outputs 1-16
+        185-200 -   P16 1-16
+        201-206 -   AUX 1-6
+        207     -   Monitor L
+        208     -   Monitor R
+
 """
 
 
-def RouteSourceFromRouteGroup(group, offset):
+def RouteSourceFromRouteGroup(group, offset, user_routing):
     """ Return a route source from a route group and offset"""
 
     matcher = re.match(
-        '(AN|OUT|CARD|P16|AUX/CR|AUX/TB|AUX|A|B)([0-9][0-9]?)?',
+        '(AN|OUT|CARD|P16|AUX/CR|AUX/TB|AUX|A|B|UOUT|UIN)([0-9][0-9]?)?',
         group
     )
     if matcher is None:
@@ -150,6 +184,23 @@ def RouteSourceFromRouteGroup(group, offset):
             offset + int(n)
         )
 
+    # TODO: Read from separate user-routing-table
+    elif src == 'UIN':
+        route_name = '{}.{:02}'.format(
+            'user-in',
+            offset + int(n)
+        )
+        if route_name in user_routing:
+            return user_routing[route_name]
+
+    elif src == 'UOUT':
+        route_name = '{}.{:02}'.format(
+            'user-out',
+            offset + int(n)
+        )
+        if route_name in user_routing:
+            return user_routing[route_name]
+
     return None
 
 
@@ -157,7 +208,7 @@ def NameFromRouteGroup(group, offset):
     """ Return a name from a route group and offset """
 
     match = re.match(
-        '(AUX|AN|A|B|OUT|CARD|P16)([0-9][0-9]?)?',
+        '(AUX|AN|A|B|OUT|CARD|P16|UIN|UOUT)([0-9][0-9]?)?',
         group
     )
     if not match:
@@ -178,6 +229,10 @@ def NameFromRouteGroup(group, offset):
         name = 'Card {:02}'.format(offset + int(n))
     elif src == 'P16':
         name = 'P-16 {:02}'.format(offset + int(n))
+    elif src == 'UIN':
+        name = 'User In {:02}'.format(offset + int(n))
+    elif src == 'UOUT':
+        name = 'User Out {:02}'.format(offset + int(n))
     elif group.startswith('AUX/CR'):
         if offset < 6:
             name = 'Aux Out {:02}'.format(offset + 1)
@@ -276,6 +331,8 @@ class ScnParser(object):
         self.channel_by_route = defaultdict(list)
         self.input_route_source = {}
         self.output_route_source = {}
+        self.user_route = {}
+        self.user_route_by_name = {}
 
     def ParseFile(self, fobj):
         """ Parse a file-like object """
@@ -289,6 +346,8 @@ class ScnParser(object):
                 self.ParseConfig(line)
             elif OUTPUTS_RE.match(line[0]):
                 self.ParseOutput(line)
+            elif USERROUTING_RE.match(line[0]):
+                self.ParseUser(line)
 
         # Automatically create some presets for Monitor L, R and TB
         self.channels['tb'] = {
@@ -306,6 +365,49 @@ class ScnParser(object):
             'color': 'INT',
             'internal': 'mon'
         }
+
+    def ParseUser(self, line):
+        routing_type, = USERROUTING_RE.match(line[0]).groups()
+
+        for n, chan_str in enumerate(line[1:]):
+            chan = int(chan_str)
+
+            item = None
+            if chan == 0:
+                continue
+            elif chan <= 32:
+                item = 'in.{:02}'.format(chan)
+            elif chan <= 80:
+                item = 'aes50a.{:02}'.format(chan - 32)
+            elif chan <= 128:
+                item = 'aes50a.{:02}'.format(chan - 80)
+            elif chan <= 160:
+                item = 'card.{:02}'.format(chan - 128)
+            elif chan <= 166:
+                item = 'auxin.{:02}'.format(chan - 160)
+            elif chan <= 168:
+                continue  # Talkback Internal, External
+            elif chan <= 184:
+                item = 'out.{:02}'.format(chan - 168)
+            elif chan <= 200:
+                item = 'p16.{:02}'.format(chan - 184)
+            elif chan <= 206:
+                item = 'aux.{:02}'.format(chan - 200)
+            elif chan <= 207:
+                item = 'mon.l'
+            elif chan <= 208:
+                item = 'mon.r'
+
+            #if routing_type == 'in':
+            #    self.input_route_source[n + 1] = item
+
+            name = 'user-{}.{}'.format(routing_type, n + 1)
+
+            #if routing_type == 'out':
+                #self.output_route_source[item] = name
+
+            self.user_route_by_name['user-{}.{:02}'.format(routing_type, n + 1)] = item
+            self.user_route[item] = 'user-{}.{:02}'.format(routing_type, n + 1)
 
     def ParseRouting(self, line):
         """ Parse routing information """
@@ -328,7 +430,7 @@ class ScnParser(object):
                 )
 
                 route_source = RouteSourceFromRouteGroup(
-                    group, i
+                    group, i, self.user_route_by_name
                 )
 
                 if name:
@@ -341,11 +443,14 @@ class ScnParser(object):
                     else:
                         src = route_source
 
-                        self.output_route_source[route_path] = route_source
+                        if route_source:
+                            self.output_route_source[route_path] = route_source
 
                     self.route[route_path] = {
                         'name': name,
-                        'output_key': src
+                        'output_key': src,
+                        'user_route': (group.startswith('UOUT') or group.startswith('UIN')),
+                        'user_route_key': self.user_route[route_source] if ((group.startswith('UOUT') or group.startswith('UIN')) and route_source) else None,
                     }
                 else:
                     self.route[route_path] = {
@@ -447,6 +552,8 @@ class ScnParser(object):
                     continue
             elif key in self.output_route_source:
                 source = self.output_route_source[key]
+            elif key in self.user_route:
+                source = self.user_route[key]
             else:
                 patch.append(None)
                 continue
@@ -465,6 +572,18 @@ class ScnParser(object):
             patch.append(self.channels.get(source))
 
         return patch
+
+    def IsUserRouted(self, chan):
+        if chan in self.route:
+            if 'user_route' in self.route[chan]:
+                if self.route[chan]['user_route']:
+                    return True
+        return False
+
+    def GetUserRoutePosition(self, chan):
+        if chan in self.route and 'user_route_key' in self.route[chan]:
+            return self.route[chan]['user_route_key']
+        return None
 
     def HasTypeAnythingAssigned(self, data_method):
         """

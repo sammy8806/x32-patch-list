@@ -24,8 +24,8 @@ parser = ScnParser()
 TYPE_NAMES = {
     'in': 'Local',
     'aux': 'Aux',
-    'aes': 'AES',
 
+    'aes': 'AES/EBU',
     'aes50a': 'AES50-A',
     'aes50b': 'AES50-B',
     'card': 'Card',
@@ -33,7 +33,9 @@ TYPE_NAMES = {
     'p16': 'Ultranet',
     'out': 'Local',
 
-    'mtx': 'Matrix'
+    'mtx': 'Matrix',
+    'user-in': 'User In',
+    'user-out': 'User Out'
 }
 
 MIX_NAMES = {
@@ -45,7 +47,6 @@ MIX_NAMES = {
 
 CHANNEL_NAMES = {
     'auxin': 'Aux',
-
 }
 
 

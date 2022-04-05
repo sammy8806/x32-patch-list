@@ -7,6 +7,7 @@
         <tr>
             <th>Input</th>
             <th>Desk</th>
+            <th>User Route</th>
             <th></th>
             <th>Name</th>
             <th>Source</th>
@@ -17,20 +18,33 @@
         </tr>
     </thead>
     <tbody>
-        {% for row in parser.GetChannelListForType(type) %} {% if not row %}{% set _row = [none] %}{% else %}{% set _row = row %}{%
-        endif %} {% set cycle = loop.cycle('odd', 'even') %} {% set parent_loop = loop %} {% for chan in _row %}
+        {% for row in parser.GetChannelListForType(type) %}
+            {% if not row %}{% set _row = [none] %}
+            {% else %}{% set _row = row %}{% endif %}
+            {% set cycle = loop.cycle('odd', 'even') %}
+            {% set parent_loop = loop %}
+                {% for chan in _row %}
         <tr class="{{cycle}}">
             {% if loop.index0 == 0 %}
             <td>{{GetSourceIndex(type, parent_loop.index) }}</td>{% else %}
             <td></td>{% endif %}
             <td>{{GetDeskName(chan)}}</td>
+            {% set userRouteKey = parser.GetUserRoutePosition('{}.{:02}'.format(type, parent_loop.index)) %}
+            {% if userRouteKey %}
+            {% set userRoutePos = userRouteKey.split('.')[1] %}
+            {% set userRouteType = 'I' if 'in' in userRouteKey else 'O' %}
+            <td>{{ (('{}-{} '.format(userRouteType, userRoutePos) if userRoutePos else '') + 'X') }}</td>
+            {% else %}
+            <td></td>
+            {% endif %}
             <td class="colour col-{{chan.color}}"></td>
             <td>{{chan.name}}</td>
             <td>{{ util.user_input() }}</td>
             <td>{{ util.user_input() }}</td>
             <td>{{ util.checkbox(chan is not none) }}</td>
         </tr>
-        {% endfor %} {% endfor %}
+        {% endfor %}
+        {% endfor %}
     </tbody>
 </table>
 
