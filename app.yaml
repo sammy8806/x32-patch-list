@@ -1,9 +1,5 @@
-runtime: python27
-api_version: 1
-threadsafe: true
-
-skip_files:
- - ^env/.*$
+runtime: python39
+instance_class: F1
 
 error_handlers:
   - file: static/error.html
@@ -11,7 +7,7 @@ error_handlers:
 handlers:
 - url: /generate
   secure: always
-  script: fe.app
+  script: auto
 
 - url: /
   static_files: static/index.html
