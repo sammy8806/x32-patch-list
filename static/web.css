@@ -152,3 +152,7 @@ iframe {
   height: 48px;
   border-bottom: 1px #000 solid;
 }
+
+.ignore > thead, .ignore > tbody {
+  display: none !important;
+}
