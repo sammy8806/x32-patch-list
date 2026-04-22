@@ -1,0 +1,94 @@
+/* Layout for the application shell: toolbar + content area. */
+
+.shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.shell-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.shell-toolbar {
+  display: flex;
+  gap: var(--gap);
+  align-items: center;
+  padding: 0.5rem 1rem;
+}
+
+.shell-toolbar .filename {
+  font-family: monospace;
+  color: var(--muted);
+  max-width: 18ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shell-toolbar .filename button {
+  font-family: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.shell-toolbar input[name="title"] {
+  flex: 1;
+}
+
+.shell-toolbar .spacer {
+  flex: 1;
+}
+
+.shell-main {
+  padding: 1rem;
+}
+
+/* Upload view */
+.upload {
+  max-width: 28rem;
+  margin: 4rem auto;
+  padding: 2rem;
+  text-align: center;
+  background: var(--surface);
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+}
+
+.upload.drag-over {
+  border-color: var(--accent);
+  background: rgba(45, 108, 223, 0.05);
+}
+
+.upload h1 {
+  margin-top: 0;
+  font-size: 1.5rem;
+}
+
+.upload p {
+  color: var(--muted);
+}
+
+.upload input[type="file"] {
+  display: block;
+  margin: 1rem auto 0;
+}
+
+.upload .hint {
+  margin-top: 1rem;
+  font-size: 0.9em;
+}
+
+.upload .error {
+  color: var(--danger);
+  margin-top: 0.5rem;
+}

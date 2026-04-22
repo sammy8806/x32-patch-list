@@ -1,0 +1,68 @@
+/* Base reset + theme tokens. No CDN. */
+
+:root {
+  --bg: #f7f7f7;
+  --surface: #ffffff;
+  --surface-alt: #eeeeee;
+  --text: #111111;
+  --muted: #666666;
+  --border: #000000;
+  --accent: #2d6cdf;
+  --accent-contrast: #ffffff;
+  --danger: #c0392b;
+
+  --gap: 0.5rem;
+  --radius: 6px;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-size: 10pt;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.4rem 0.8rem;
+  cursor: pointer;
+}
+
+button.primary {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-color: var(--accent);
+}
+
+button:hover {
+  filter: brightness(0.97);
+}
+
+input[type="text"],
+input[type="file"] {
+  font: inherit;
+}
+
+input[type="text"] {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}

@@ -1,0 +1,26 @@
+/config/routing/IN AN1-8 AN9-16 AN17-24 AN25-32
+/config/routing/AES50A OUT1-8 OUT9-16 OUT17-24 OUT25-32 OUT1-8 OUT1-8
+/config/routing/AES50B AUX/CR AUX/TB OUT1-8 OUT1-8 OUT1-8 OUT1-8
+/config/routing/CARD AN1-8 AN9-16 AN17-24 AN25-32
+/config/routing/OUT OUT1-4 OUT5-8 OUT9-12 OUT13-16
+/config/userrout/in/01 33 34 81 82 1 2 129 130 161 162 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+/config/userrout/out/01 1 2 33 34 81 82 169 170 201 202 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+/ch/01/config "Kick In" 0 RD 1
+/ch/02/config "Kick Out" 0 RD 2
+/ch/03/config Snare 0 YE 3
+/ch/04/config "Hi Hat" 0 CY 4
+/ch/17/config "Lead Vox" 0 MG 17
+/auxin/01/config "USB L" 0 WH 39
+/bus/01/config "Monitors" 0 GN
+/main/st/config "FOH L/R" 0 RD
+/main/m/config "FOH Mono" 0 RD
+/mtx/01/config "Recording L" 0 BL
+/mtx/02/config "Recording R" 0 BL
+/fxrtn/01/config "Reverb Return" 0 CY
+/outputs/main/01 4 0 0
+/outputs/main/02 5 0 0
+/outputs/aux/01 1 0 0
+/outputs/aux/02 2 0 0
+/outputs/aes/01 1 0 0
+/outputs/aes/02 2 0 0
+/outputs/p16/01 26 0 0

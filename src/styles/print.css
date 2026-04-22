@@ -1,0 +1,70 @@
+/*
+ * Print styles for the patch list. Ported verbatim from
+ * legacy/static/print.css — the Python app has been printed constantly in
+ * this form and we want to keep parity with that output.
+ */
+
+@page {
+  size: A4;
+}
+
+@media print {
+  body {
+    font-size: 7pt !important;
+    background: #ffffff !important;
+  }
+
+  /* Hide the screen shell chrome when printing. */
+  x32-toolbar,
+  x32-upload,
+  .shell-header {
+    display: none !important;
+  }
+
+  table.patch {
+    page-break-before: auto;
+    page-break-inside: avoid;
+    width: 100% !important;
+  }
+
+  table.patch tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  table.patch td:last-child {
+    display: none;
+  }
+
+  textarea {
+    border: 0 !important;
+    border-style: none !important;
+    font-size: 7pt !important;
+  }
+
+  td {
+    -webkit-print-color-adjust: exact;
+    color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .ignore {
+    display: none !important;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  .togglechildren {
+    display: none !important;
+  }
+
+  input[type='checkbox'] {
+    display: none !important;
+  }
+
+  h1 {
+    display: block !important;
+  }
+}

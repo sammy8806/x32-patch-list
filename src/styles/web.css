@@ -1,0 +1,136 @@
+/*
+ * Screen styles for the patch list. Ported from legacy/static/web.css with
+ * only minimal changes (colour names use CSS custom properties where they
+ * used to be hard-coded). Table layout and colour classes are unchanged so
+ * the print output looks identical to the Python version.
+ */
+
+body {
+  font-size: 10pt;
+  font-family: sans-serif;
+}
+
+h1 {
+  text-align: center;
+  display: none;
+  font-size: 18pt;
+}
+
+.details {
+  padding-bottom: 0.1em;
+  margin-bottom: 0.5em;
+  border-bottom: 1px #000 solid;
+}
+
+textarea {
+  width: 95%;
+  border: 0;
+  overflow: hidden;
+  resize: none;
+  font: inherit;
+}
+
+table.patch {
+  width: 50%;
+  border-collapse: collapse;
+  font-family: monospace;
+  margin-bottom: 2em;
+}
+
+table.patch td {
+  border: 1px #000 solid;
+}
+
+table.patch textarea {
+  margin-left: 0.5em;
+  width: 95%;
+  font-family: monospace;
+  height: 1em;
+  background: none;
+  border: 0;
+  word-wrap: break-word;
+  vertical-align: middle;
+}
+
+table.patch caption {
+  padding: 1em;
+  font-size: 16pt;
+  font-family: sans-serif;
+  font-weight: bold;
+  text-align: left;
+}
+
+table.patch td.colour {
+  width: 1.5em;
+}
+
+table.patch th {
+  text-align: left;
+}
+
+/* Checkbox */
+table.patch td:last-child,
+table.patch th:last-child {
+  width: 1em;
+  text-align: center;
+}
+
+/* In/Out; Line */
+table.patch td:nth-child(1) {
+  width: 1.8em;
+  text-align: right;
+  padding-right: 0.4em;
+}
+
+/* Line */
+table.patch td:nth-child(2) {
+  width: 4.8em;
+  text-align: right;
+  padding-right: 0.4em;
+}
+
+/* User Route */
+table.patch td:nth-child(3) {
+  width: 5em;
+  text-align: right;
+  padding-right: 0.4em;
+}
+
+/* Name */
+table.patch td:nth-child(5) {
+  width: 10em;
+  padding-left: 0.4em;
+}
+
+/* Source and Remarks */
+table.patch td:nth-child(6),
+table.patch td:nth-child(7) {
+  width: 25em;
+}
+
+/* Channel Colours — X32 strip colour codes. */
+.col-RD,
+.col-RDi { background: #ff0000 !important; }
+.col-CY,
+.col-CYi { background: #00ffff !important; }
+.col-GN,
+.col-GNi { background: #00ff00 !important; }
+.col-BL,
+.col-BLi { background: #0000ff !important; }
+.col-YE,
+.col-YEi { background: #ffff00 !important; }
+.col-WH,
+.col-WHi { background: #ffffff !important; }
+.col-MG,
+.col-MGi { background: #ff00ff !important; }
+.col-OFF,
+.col-OFFi { background: #000000 !important; }
+.col-INT { background: #777777 !important; }
+
+.odd td { background: #ffffff; }
+.even td { background: #eeeeee; }
+
+.ignore > thead,
+.ignore > tbody {
+  display: none !important;
+}
