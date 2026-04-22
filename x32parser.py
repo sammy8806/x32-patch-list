@@ -25,10 +25,13 @@ CONFIG_RE = re.compile(
     r'/(ch|auxin|bus|mtx|main|fxrtn)/([0-3][0-9]|st|m)/config'
 )
 ROUTING_RE = re.compile(
-    r'/config/routing/(IN|AES50A|AES50B|CARD|OUT)'
+    r'/config/routing/(IN|PLAY|AES50A|AES50B|CARD|OUT)'
 )
 USERROUTING_RE = re.compile(
     r'/config/userrout/(in|out)'
+)
+ROUTESWITCH_RE = re.compile(
+    r'/config/routing/routswitch$'
 )
 
 # main = outputs
@@ -42,7 +45,7 @@ INPUTS = ['ch', 'auxin']
 MAX_CHANNELS = {
     'aes50a': 48,
     'aes50b': 48,
-    'user-in': 48,
+    'user-in': 32,
     'in': 40,
     'card': 32,
 }
@@ -321,6 +324,52 @@ def GetNameForOutput(ch_type, ch_num):
     return name
 
 
+def GetUserRouteSource(routing_type, source):
+    """Return a route source key from a user-routing integer."""
+
+    if source == 0:
+        return None
+    if source <= 32:
+        return 'in.{:02}'.format(source)
+    if source <= 80:
+        return 'aes50a.{:02}'.format(source - 32)
+    if source <= 128:
+        return 'aes50b.{:02}'.format(source - 80)
+    if source <= 160:
+        return 'card.{:02}'.format(source - 128)
+    if source <= 166:
+        return 'auxin.{:02}'.format(source - 160)
+    if source <= 168:
+        return 'tb'
+    if routing_type != 'out':
+        return None
+    if source <= 184:
+        return 'out.{:02}'.format(source - 168)
+    if source <= 200:
+        return 'p16.{:02}'.format(source - 184)
+    if source <= 206:
+        return 'aux.{:02}'.format(source - 200)
+    if source == 207:
+        return 'mon.l'
+    if source == 208:
+        return 'mon.r'
+    return None
+
+
+def GetUserRouteKey(group, offset):
+    """Return the explicit user-route slot selected by a UIN/UOUT group."""
+
+    match = re.match(r'(UOUT|UIN)([0-9][0-9]?)?', group)
+    if not match:
+        return None
+
+    route_type, start = match.groups()
+    return 'user-{}.{:02}'.format(
+        'out' if route_type == 'UOUT' else 'in',
+        offset + int(start)
+    )
+
+
 class ScnParser(object):
     """ X32 File format parser """
 
@@ -329,10 +378,15 @@ class ScnParser(object):
         self.channels = {}
         self.outputs = {}
         self.channel_by_route = defaultdict(list)
-        self.input_route_source = {}
+        self.input_route_source = defaultdict(list)
         self.output_route_source = {}
-        self.user_route = {}
         self.user_route_by_name = {}
+        self.user_route_by_source = defaultdict(list)
+        self.input_route = {
+            'IN': {},
+            'PLAY': {}
+        }
+        self.routing_switch = 'IN'
 
     def ParseFile(self, fobj):
         """ Parse a file-like object """
@@ -340,7 +394,9 @@ class ScnParser(object):
         self.__init__()
 
         for line in csv.reader(fobj, delimiter=' '):
-            if ROUTING_RE.match(line[0]):
+            if ROUTESWITCH_RE.match(line[0]):
+                self.ParseRouteSwitch(line)
+            elif ROUTING_RE.match(line[0]):
                 self.ParseRouting(line)
             elif CONFIG_RE.match(line[0]):
                 self.ParseConfig(line)
@@ -348,6 +404,8 @@ class ScnParser(object):
                 self.ParseOutput(line)
             elif USERROUTING_RE.match(line[0]):
                 self.ParseUser(line)
+
+        self.ApplyActiveInputRouting()
 
         # Automatically create some presets for Monitor L, R and TB
         self.channels['tb'] = {
@@ -366,48 +424,39 @@ class ScnParser(object):
             'internal': 'mon'
         }
 
+    def ParseRouteSwitch(self, line):
+        """Parse the active input-routing switch."""
+
+        self.routing_switch = 'PLAY' if len(line) > 1 and line[1] == '1' else 'IN'
+
     def ParseUser(self, line):
         routing_type, = USERROUTING_RE.match(line[0]).groups()
 
         for n, chan_str in enumerate(line[1:]):
             chan = int(chan_str)
+            item = GetUserRouteSource(routing_type, chan)
+            name = 'user-{}.{:02}'.format(routing_type, n + 1)
 
-            item = None
-            if chan == 0:
-                continue
-            elif chan <= 32:
-                item = 'in.{:02}'.format(chan)
-            elif chan <= 80:
-                item = 'aes50a.{:02}'.format(chan - 32)
-            elif chan <= 128:
-                item = 'aes50a.{:02}'.format(chan - 80)
-            elif chan <= 160:
-                item = 'card.{:02}'.format(chan - 128)
-            elif chan <= 166:
-                item = 'auxin.{:02}'.format(chan - 160)
-            elif chan <= 168:
-                continue  # Talkback Internal, External
-            elif chan <= 184:
-                item = 'out.{:02}'.format(chan - 168)
-            elif chan <= 200:
-                item = 'p16.{:02}'.format(chan - 184)
-            elif chan <= 206:
-                item = 'aux.{:02}'.format(chan - 200)
-            elif chan <= 207:
-                item = 'mon.l'
-            elif chan <= 208:
-                item = 'mon.r'
+            self.user_route_by_name[name] = item
+            if item:
+                self.user_route_by_source[item].append(name)
 
-            #if routing_type == 'in':
-            #    self.input_route_source[n + 1] = item
+    def BuildRouteEntry(self, route_path, route_source, group, offset, routing_type):
+        """Build a single parsed route entry."""
 
-            name = 'user-{}.{}'.format(routing_type, n + 1)
+        name = NameFromRouteGroup(group, offset)
+        if not name:
+            return route_path, {
+                'off': True
+            }
 
-            #if routing_type == 'out':
-                #self.output_route_source[item] = name
-
-            self.user_route_by_name['user-{}.{:02}'.format(routing_type, n + 1)] = item
-            self.user_route[item] = 'user-{}.{:02}'.format(routing_type, n + 1)
+        return route_path, {
+            'name': name,
+            'output_key': route_source if routing_type != 'IN' else None,
+            'source_key': route_source,
+            'user_route': group.startswith('UOUT') or group.startswith('UIN'),
+            'user_route_key': GetUserRouteKey(group, offset) if route_source else None,
+        }
 
     def ParseRouting(self, line):
         """ Parse routing information """
@@ -421,41 +470,38 @@ class ScnParser(object):
             # The last values must then stay as their defaults.
             group_size = 8
 
+        input_route = routing_type in ['IN', 'PLAY']
+        target = self.input_route[routing_type] if input_route else self.route
+
         for n, group in enumerate(line[1:]):
             for i in range(group_size):
-                name = NameFromRouteGroup(group, i)
                 route_path = '{}.{:02}'.format(
-                    routing_type.lower(),
+                    'in' if input_route else routing_type.lower(),
                     (n * group_size) + i + 1
                 )
 
                 route_source = RouteSourceFromRouteGroup(
                     group, i, self.user_route_by_name
                 )
+                route_path, route_entry = self.BuildRouteEntry(
+                    route_path, route_source, group, i, 'IN' if input_route else routing_type
+                )
+                target[route_path] = route_entry
 
-                if name:
-                    if routing_type == 'IN':
-                        src = None
+                if not input_route and route_source:
+                    self.output_route_source[route_path] = route_source
 
-                        self.input_route_source[
-                            route_source
-                        ] = route_path
-                    else:
-                        src = route_source
+    def ApplyActiveInputRouting(self):
+        """Apply the active REC/PLAY input map and index it by source."""
 
-                        if route_source:
-                            self.output_route_source[route_path] = route_source
+        self.input_route_source = defaultdict(list)
 
-                    self.route[route_path] = {
-                        'name': name,
-                        'output_key': src,
-                        'user_route': (group.startswith('UOUT') or group.startswith('UIN')),
-                        'user_route_key': self.user_route[route_source] if ((group.startswith('UOUT') or group.startswith('UIN')) and route_source) else None,
-                    }
-                else:
-                    self.route[route_path] = {
-                        'off': True
-                    }
+        for route_path, route_entry in self.input_route[self.routing_switch].items():
+            self.route[route_path] = route_entry
+
+            route_source = route_entry.get('source_key')
+            if route_source:
+                self.input_route_source[route_source].append(route_path)
 
     def ParseOutput(self, line):
         """ Parse output routes """
@@ -552,8 +598,6 @@ class ScnParser(object):
                     continue
             elif key in self.output_route_source:
                 source = self.output_route_source[key]
-            elif key in self.user_route:
-                source = self.user_route[key]
             else:
                 patch.append(None)
                 continue
@@ -609,9 +653,12 @@ class ScnParser(object):
                 patch.append(None)
                 continue
 
-            route_key = self.input_route_source[key]
-            if self.channel_by_route[route_key]:
-                patch.append(self.channel_by_route[route_key])
+            routed_channels = []
+            for route_key in self.input_route_source[key]:
+                routed_channels.extend(self.channel_by_route[route_key])
+
+            if routed_channels:
+                patch.append(routed_channels)
             else:
                 patch.append(None)
 
