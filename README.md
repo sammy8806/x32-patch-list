@@ -11,7 +11,27 @@ This specific instance is hosted by:
 ![Sammy8806](https://badgen.net/mastodon/follow/sammy8806@layer8.space)
 
 ## Installing For yourself
-The only dependency is `flask`. Running `pip install -r requirements.txt` will install the required dependencies.
+This project now targets Python 3.14 and uses pinned dependency sets for runtime and local development.
+
+Create an environment and install the development dependencies:
+
+```bash
+uv venv --python 3.14
+source .venv/bin/activate
+uv pip install -r requirements-dev.txt
+```
 
 ## Running
-`python3 main.py` will start a Flask development server
+`python main.py` will start a Flask development server.
+
+For App Engine Standard, deploy with `app.yaml`. The app uses:
+
+- `python314`
+- `gunicorn` as the web server entrypoint
+
+## Testing
+Run the test suite with:
+
+```bash
+pytest
+```

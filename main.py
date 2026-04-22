@@ -17,7 +17,6 @@ from flask import Flask, request, render_template, redirect, url_for
 from x32parser import ScnParser
 
 app = Flask(__name__, static_url_path='/')
-app.debug = True
 
 parser = ScnParser()
 
@@ -132,4 +131,4 @@ def generate():
 
 
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True)

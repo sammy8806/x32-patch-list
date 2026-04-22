@@ -1,5 +1,7 @@
-lib/
 *.pyc
 __pycache__
 .pylintrc
 .vscode/
+.pytest_cache/
+.venv*/
+.reference/

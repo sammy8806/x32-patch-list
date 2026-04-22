@@ -1,17 +1,6 @@
-runtime: python39
+runtime: python314
+entrypoint: gunicorn -b :$PORT main:app
 instance_class: F1
 
 error_handlers:
   - file: static/error.html
-
-handlers:
-- url: /generate
-  secure: always
-  script: auto
-
-- url: /
-  static_files: static/index.html
-  upload: static/index.html
-
-- url: /
-  static_dir: static/
