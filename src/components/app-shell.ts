@@ -18,6 +18,7 @@ import type {
 
 import { ScnParser } from '../parser/scn-parser.js';
 import {
+  findCachedScenesByFilename,
   loadScene,
   loadSession,
   makeEmptyState,
@@ -138,7 +139,21 @@ export class AppShell extends LitElement {
 
   private onSceneSelected = (e: CustomEvent<SceneSelectedDetail>) => {
     const { text, filename, size } = e.detail;
-    const id = sessionIdFor(filename, size);
+    const cachedMatches = findCachedScenesByFilename(filename);
+    const exactMatch = cachedMatches.find((match) => match.scene.text === text);
+
+    if (exactMatch) {
+      this.openStoredSession(exactMatch.sessionId);
+      return;
+    }
+
+    const latestSameName = cachedMatches[0];
+    if (latestSameName && !this.shouldOpenSelectedScene(filename)) {
+      this.openStoredSession(latestSameName.sessionId);
+      return;
+    }
+
+    const id = sessionIdFor(filename, text);
     this.openSession({ sessionId: id, filename, size, text });
   };
 
@@ -318,6 +333,16 @@ export class AppShell extends LitElement {
     if (next !== current) {
       window.history.replaceState(null, '', next);
     }
+  }
+
+  private shouldOpenSelectedScene(filename: string): boolean {
+    return window.confirm(
+      [
+        `A different cached scene named "${filename}" already exists.`,
+        'Press OK to open the newly selected file from disk.',
+        'Press Cancel to keep using the cached copy instead.',
+      ].join('\n\n'),
+    );
   }
 }
 

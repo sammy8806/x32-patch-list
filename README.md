@@ -16,9 +16,10 @@ it as a PWA once you've loaded it over HTTPS.
    set a title, and hit **Print**.
 
 Title, remarks, row toggles, and section toggles are saved in `localStorage`
-keyed by the scene filename + size, so reloading or coming back later brings
-your notes with you. Use **Export JSON** to dump the parsed model plus your
-notes as a portable JSON file.
+keyed by the scene filename + contents, so reloading or coming back later
+brings your notes with you without colliding with a different same-name file.
+Use **Export JSON** to dump the parsed model plus your notes as a portable JSON
+file.
 
 When loaded over HTTPS (or localhost) a service worker caches the app so it
 keeps working offline. From `file://` the service worker stays unregistered

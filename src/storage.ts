@@ -9,7 +9,7 @@
  *
  * Everything is scoped under a single top-level key so clearing it is a single
  * `delete`. State is saved against a "session id" — the hash of the loaded
- * scene filename + file size — so opening a different file doesn't clobber
+ * scene filename + scene contents — so opening a different file doesn't clobber
  * the notes you wrote for the previous one.
  */
 
@@ -75,11 +75,12 @@ function write(data: StoredShape): void {
 }
 
 /**
- * Derive a stable-ish session id from filename + size. Good enough to keep
- * remarks paired with the right scene file without needing a hash library.
+ * Derive a stable session id from filename + scene contents so selecting the
+ * same file again reuses its notes, while a changed file with the same name
+ * becomes a distinct session.
  */
-export function sessionIdFor(filename: string, size: number): string {
-  return `${filename}|${size}`;
+export function sessionIdFor(filename: string, text: string): string {
+  return `${filename}|${hashText(`${filename}\0${text}`)}`;
 }
 
 export function loadSession(sessionId: string): SessionState | null {
@@ -90,6 +91,31 @@ export function loadSession(sessionId: string): SessionState | null {
 export function loadScene(sessionId: string): CachedScene | null {
   const root = read();
   return root.sessions[sessionId]?.scene ?? null;
+}
+
+export interface CachedSceneMatch {
+  sessionId: string;
+  state: SessionState;
+  scene: CachedScene;
+  updatedAt: number;
+}
+
+export function findCachedScenesByFilename(filename: string): CachedSceneMatch[] {
+  const root = read();
+  return Object.entries(root.sessions)
+    .flatMap(([sessionId, entry]) =>
+      entry.scene?.filename === filename
+        ? [
+            {
+              sessionId,
+              state: entry.state,
+              scene: entry.scene,
+              updatedAt: entry.updatedAt,
+            },
+          ]
+        : [],
+    )
+    .sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
 export function saveSession(
@@ -224,4 +250,13 @@ function isStoredSession(value: unknown): value is StoredSession {
 
 function isRecord(value: unknown): value is Record<string, any> {
   return typeof value === 'object' && value !== null;
+}
+
+function hashText(value: string): string {
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16).padStart(8, '0');
 }
