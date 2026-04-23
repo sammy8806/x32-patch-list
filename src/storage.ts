@@ -25,6 +25,12 @@ export interface SessionState {
   visibleRows: Record<string, boolean>;
   /** `visibleSections[sectionKey] = boolean` — absent means "default visible". */
   visibleSections: Record<string, boolean>;
+  /**
+   * `collapsedGaps[gapKey] = boolean` — absent means "default collapsed".
+   * A gap key identifies a run of empty rows inside a patch table;
+   * see `computeSegments` in `patch-table.ts` for the key format.
+   */
+  collapsedGaps: Record<string, boolean>;
 }
 
 export interface CachedScene {
@@ -190,6 +196,7 @@ export function makeEmptyState(filename: string): SessionState {
     rowText: {},
     visibleRows: {},
     visibleSections: {},
+    collapsedGaps: {},
   };
 }
 
@@ -225,6 +232,7 @@ function normalizeSessionState(value: unknown): SessionState {
     visibleSections: isRecord(record.visibleSections)
       ? record.visibleSections
       : {},
+    collapsedGaps: isRecord(record.collapsedGaps) ? record.collapsedGaps : {},
   };
 }
 

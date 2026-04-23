@@ -13,7 +13,7 @@
  * reports changes upwards via events.
  */
 
-import { LitElement, html } from 'lit';
+import { LitElement, html, type TemplateResult } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { classMap } from 'lit/directives/class-map.js';
 import { ref, createRef, type Ref } from 'lit/directives/ref.js';
@@ -21,6 +21,14 @@ import type { Channel, P16OutputRow } from '../parser/types.js';
 import type { ScnParser } from '../parser/scn-parser.js';
 import { TYPE_NAMES } from '../parser/constants.js';
 import { getDeskName, getSourceIndex } from '../parser/display.js';
+import {
+  computeSegments,
+  gapKey,
+  type Segment,
+} from './table-segments.js';
+
+/** Column count of an input/output patch table; kept in sync with the thead. */
+const TABLE_COLSPAN = 8;
 
 export type PatchTableVariant = 'input' | 'output';
 
@@ -41,6 +49,7 @@ export class PatchTable extends LitElement {
   @property({ attribute: false }) rowText: Record<string, RowText> = {};
   @property({ attribute: false }) visibleRows: Record<string, boolean> = {};
   @property({ attribute: false }) visibleSections: Record<string, boolean> = {};
+  @property({ attribute: false }) collapsedGaps: Record<string, boolean> = {};
 
   @state() private sectionKey = '';
 
@@ -94,6 +103,14 @@ export class PatchTable extends LitElement {
       : defaultVisible;
   }
 
+  /**
+   * Collapsible gaps default to collapsed. Only explicit user choices are
+   * stored — `true` keeps it collapsed, `false` means user expanded it.
+   */
+  private isGapCollapsed(key: string): boolean {
+    return key in this.collapsedGaps ? this.collapsedGaps[key] : true;
+  }
+
   // ---------------- Event helpers ----------------
 
   private emitRowText(key: string, field: 'source' | 'remarks', value: string): void {
@@ -126,6 +143,16 @@ export class PatchTable extends LitElement {
     );
   }
 
+  private emitGapCollapse(key: string, collapsed: boolean): void {
+    this.dispatchEvent(
+      new CustomEvent('gap-collapse-change', {
+        detail: { key, collapsed },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
   // ---------------- Render ----------------
 
   override render() {
@@ -138,6 +165,7 @@ export class PatchTable extends LitElement {
     const defaultSectionVisible = this.parser.hasTypeAnythingAssigned(rows);
     const sectionVisible = this.isSectionVisible(defaultSectionVisible);
     const label = TYPE_NAMES[this.patchType] ?? this.patchType;
+    const segments = computeSegments(rows);
 
     return html`
       <table
@@ -173,15 +201,25 @@ export class PatchTable extends LitElement {
           </tr>
         </thead>
         <tbody>
-          ${rows.flatMap((row, lineIndex) =>
-            this.renderInputRowGroup(row, lineIndex),
+          ${segments.flatMap((segment) =>
+            this.renderSegment(segment, (row, lineIndex, extraClasses) =>
+              this.renderInputRowGroup(
+                row as Channel[] | null,
+                lineIndex,
+                extraClasses,
+              ),
+            ),
           )}
         </tbody>
       </table>
     `;
   }
 
-  private renderInputRowGroup(row: Channel[] | null, lineIndex: number) {
+  private renderInputRowGroup(
+    row: Channel[] | null,
+    lineIndex: number,
+    extraClasses: Record<string, boolean> = {},
+  ) {
     const group = row ?? [null as Channel | null];
     const parity = lineIndex % 2 === 0 ? 'odd' : 'even';
 
@@ -197,7 +235,7 @@ export class PatchTable extends LitElement {
       const userRouteCell = renderUserRouteCell(userRouteKey);
 
       return html`
-        <tr class=${classMap({ [parity]: true, ignore: !visible })}>
+        <tr class=${classMap({ [parity]: true, ignore: !visible, ...extraClasses })}>
           <td>${subIndex === 0 ? getSourceIndex(this.patchType, lineIndex + 1) : ''}</td>
           <td>${getDeskName(chan)}</td>
           ${userRouteCell}
@@ -226,6 +264,7 @@ export class PatchTable extends LitElement {
     const defaultSectionVisible = this.parser.hasTypeAnythingAssigned(rows);
     const sectionVisible = this.isSectionVisible(defaultSectionVisible);
     const label = TYPE_NAMES[this.patchType] ?? this.patchType;
+    const segments = computeSegments(rows);
 
     return html`
       <table
@@ -260,13 +299,27 @@ export class PatchTable extends LitElement {
           </tr>
         </thead>
         <tbody>
-          ${rows.map((row, lineIndex) => this.renderOutputRow(row, lineIndex))}
+          ${segments.flatMap((segment) =>
+            this.renderSegment(segment, (row, lineIndex, extraClasses) =>
+              [
+                this.renderOutputRow(
+                  row as Channel | P16OutputRow | null,
+                  lineIndex,
+                  extraClasses,
+                ),
+              ],
+            ),
+          )}
         </tbody>
       </table>
     `;
   }
 
-  private renderOutputRow(row: Channel | P16OutputRow | null, lineIndex: number) {
+  private renderOutputRow(
+    row: Channel | P16OutputRow | null,
+    lineIndex: number,
+    extraClasses: Record<string, boolean> = {},
+  ) {
     const parity = lineIndex % 2 === 0 ? 'odd' : 'even';
     const key = this.rowKey(lineIndex);
     const rowText = this.rowText[key] ?? {};
@@ -275,7 +328,7 @@ export class PatchTable extends LitElement {
     if (row && (row as P16OutputRow).p16) {
       const visible = this.isRowVisible(key, false);
       return html`
-        <tr class=${classMap({ [parity]: true, ignore: !visible })}>
+        <tr class=${classMap({ [parity]: true, ignore: !visible, ...extraClasses })}>
           <td>${lineIndex + 1}</td>
           <td></td>
           <td></td>
@@ -305,7 +358,7 @@ export class PatchTable extends LitElement {
     );
 
     return html`
-      <tr class=${classMap({ [parity]: true, ignore: !visible })}>
+      <tr class=${classMap({ [parity]: true, ignore: !visible, ...extraClasses })}>
         <td>${lineIndex + 1}</td>
         <td>${getDeskName(channel)}</td>
         ${renderUserRouteCell(userRouteKey)}
@@ -323,6 +376,72 @@ export class PatchTable extends LitElement {
             @change=${(e: Event) =>
               this.emitRowVisibility(key, (e.target as HTMLInputElement).checked)}
           />
+        </td>
+      </tr>
+    `;
+  }
+
+  /**
+   * Render one segment from `computeSegments`. Data segments just delegate to
+   * `renderRow`. Gap segments always render their empty rows into the DOM
+   * (so `print.css` can let them through losslessly) and — when collapsible —
+   * add a clickable bar plus a `.gap-collapsed` class on the hidden rows when
+   * the user hasn't expanded them.
+   */
+  private renderSegment<T>(
+    segment: Segment<T>,
+    renderRow: (
+      row: T | null,
+      lineIndex: number,
+      extraClasses?: Record<string, boolean>,
+    ) => unknown,
+  ): unknown[] {
+    if (segment.kind === 'data') {
+      return segment.rows.map((row, offset) =>
+        renderRow(row, segment.start + offset),
+      );
+    }
+
+    if (!segment.collapsible) {
+      const out: unknown[] = [];
+      for (let i = segment.start; i <= segment.end; i += 1) {
+        out.push(renderRow(null as T | null, i));
+      }
+      return out;
+    }
+
+    const key = gapKey(this.variant, this.patchType, segment);
+    const collapsed = this.isGapCollapsed(key);
+    const out: unknown[] = [this.renderGapBar(segment, key, collapsed)];
+    for (let i = segment.start; i <= segment.end; i += 1) {
+      out.push(renderRow(null as T | null, i, { 'gap-collapsed': collapsed }));
+    }
+    return out;
+  }
+
+  private renderGapBar(
+    segment: Extract<Segment<unknown>, { kind: 'gap' }>,
+    key: string,
+    collapsed: boolean,
+  ): TemplateResult {
+    const countLabel =
+      segment.count === 1 ? '1 empty row' : `${segment.count} empty rows`;
+    const title = collapsed
+      ? `Expand ${countLabel}`
+      : `Collapse ${countLabel}`;
+    return html`
+      <tr
+        class=${classMap({
+          'gap-bar': true,
+          'gap-bar-collapsed': collapsed,
+          'gap-bar-expanded': !collapsed,
+        })}
+        title=${title}
+        @click=${() => this.emitGapCollapse(key, !collapsed)}
+      >
+        <td colspan=${TABLE_COLSPAN}>
+          <span class="gap-chevron" aria-hidden="true">${collapsed ? '▸' : '▾'}</span>
+          <span class="gap-count">${countLabel}</span>
         </td>
       </tr>
     `;

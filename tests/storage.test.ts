@@ -178,6 +178,7 @@ describe('storage', () => {
       visibleSections: {
         'input:in': true,
       },
+      collapsedGaps: {},
     });
     expect(loadScene(sessionId)).toBeNull();
     expect(recentFiles()).toEqual([

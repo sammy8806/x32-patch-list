@@ -29,6 +29,7 @@ export class PatchList extends LitElement {
   @property({ attribute: false }) rowText: Record<string, RowText> = {};
   @property({ attribute: false }) visibleRows: Record<string, boolean> = {};
   @property({ attribute: false }) visibleSections: Record<string, boolean> = {};
+  @property({ attribute: false }) collapsedGaps: Record<string, boolean> = {};
 
   override render() {
     return html`
@@ -51,6 +52,7 @@ export class PatchList extends LitElement {
             .rowText=${this.rowText}
             .visibleRows=${this.visibleRows}
             .visibleSections=${this.visibleSections}
+            .collapsedGaps=${this.collapsedGaps}
           ></x32-patch-table>
         `,
       )}
@@ -64,6 +66,7 @@ export class PatchList extends LitElement {
             .rowText=${this.rowText}
             .visibleRows=${this.visibleRows}
             .visibleSections=${this.visibleSections}
+            .collapsedGaps=${this.collapsedGaps}
           ></x32-patch-table>
         `,
       )}

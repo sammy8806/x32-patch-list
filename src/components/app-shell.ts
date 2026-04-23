@@ -71,6 +71,10 @@ export class AppShell extends LitElement {
       this.onSectionVisibilityChange as EventListener,
     );
     this.addEventListener('toggle-all-rows', this.onToggleAllRows as EventListener);
+    this.addEventListener(
+      'gap-collapse-change',
+      this.onGapCollapseChange as EventListener,
+    );
     window.addEventListener('popstate', this.onPopState);
     this.restoreInitialSession();
   }
@@ -97,6 +101,10 @@ export class AppShell extends LitElement {
       this.onSectionVisibilityChange as EventListener,
     );
     this.removeEventListener('toggle-all-rows', this.onToggleAllRows as EventListener);
+    this.removeEventListener(
+      'gap-collapse-change',
+      this.onGapCollapseChange as EventListener,
+    );
     window.removeEventListener('popstate', this.onPopState);
   }
 
@@ -128,6 +136,7 @@ export class AppShell extends LitElement {
             .rowText=${this.session.rowText}
             .visibleRows=${this.session.visibleRows}
             .visibleSections=${this.session.visibleSections}
+            .collapsedGaps=${this.session.collapsedGaps}
           ></x32-patch-list>
         </main>
       </div>
@@ -244,6 +253,15 @@ export class AppShell extends LitElement {
     });
   };
 
+  private onGapCollapseChange = (
+    e: CustomEvent<{ key: string; collapsed: boolean }>,
+  ) => {
+    const { key, collapsed } = e.detail;
+    this.mutateSession((s) => {
+      s.collapsedGaps = { ...s.collapsedGaps, [key]: collapsed };
+    });
+  };
+
   private onPopState = () => {
     const sessionId = this.urlSessionId();
     if (!sessionId) {
@@ -310,6 +328,7 @@ export class AppShell extends LitElement {
       rowText: { ...this.session.rowText },
       visibleRows: { ...this.session.visibleRows },
       visibleSections: { ...this.session.visibleSections },
+      collapsedGaps: { ...this.session.collapsedGaps },
     };
     mutator(next);
     this.session = next;

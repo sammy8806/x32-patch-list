@@ -137,3 +137,65 @@ table.patch td:nth-child(7) {
 .ignore > tbody {
   display: none !important;
 }
+
+/*
+ * Gap-collapse bar. A thin clickable row that stands in for a run of empty
+ * rows. Only shown on screen — print.css hides it and lets the empty rows
+ * render as normal so printouts remain lossless.
+ */
+table.patch tr.gap-bar {
+  cursor: pointer;
+  user-select: none;
+}
+
+table.patch tr.gap-bar td {
+  padding: 0 0.4em;
+  background: var(--surface);
+  border: 1px #000 solid;
+  font-family: sans-serif;
+  color: var(--muted);
+  line-height: 1;
+  height: 8px;
+  font-size: 9pt;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+table.patch tr.gap-bar:hover td {
+  background: var(--surface-alt);
+  color: var(--text);
+}
+
+table.patch tr.gap-bar .gap-chevron {
+  display: inline-block;
+  width: 1em;
+  text-align: center;
+  font-family: monospace;
+}
+
+/* When expanded, the bar appears *after* the empty rows and reads
+   more like a secondary action — tone it down a bit. */
+table.patch tr.gap-bar-expanded td {
+  height: 6px;
+  opacity: 0.75;
+}
+
+/* The count text only shows on hover (tooltip is the primary source).
+   Keeps the resting state visually minimal per the "thin bar" decision. */
+table.patch tr.gap-bar .gap-count {
+  display: none;
+  margin-left: 0.5em;
+}
+
+table.patch tr.gap-bar:hover .gap-count {
+  display: inline;
+}
+
+/*
+ * Rows inside a collapsed gap are kept in the DOM (so they still print and
+ * keep their text/visibility state) but hidden from the screen layout.
+ * print.css overrides this back to visible for the print stylesheet.
+ */
+table.patch tr.gap-collapsed {
+  display: none;
+}
