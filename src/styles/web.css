@@ -173,6 +173,14 @@ table.patch tr.gap-bar .gap-chevron {
   font-family: monospace;
 }
 
+table.patch tr.gap-bar .gap-hint {
+  display: inline;
+  margin-left: 0.35em;
+  font-size: 0.75em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 /* When expanded, the bar appears *after* the empty rows and reads
    more like a secondary action — tone it down a bit. */
 table.patch tr.gap-bar-expanded td {

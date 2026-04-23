@@ -441,6 +441,9 @@ export class PatchTable extends LitElement {
       >
         <td colspan=${TABLE_COLSPAN}>
           <span class="gap-chevron" aria-hidden="true">${collapsed ? '▸' : '▾'}</span>
+          ${collapsed
+            ? html`<span class="gap-hint">expand</span>`
+            : null}
           <span class="gap-count">${countLabel}</span>
         </td>
       </tr>
