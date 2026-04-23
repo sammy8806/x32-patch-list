@@ -53,15 +53,15 @@
   }
 
   /*
-   * Collapse bars are a screen-only affordance; never print them. Rows in a
-   * screen-collapsed gap DO print — so override web.css's `display: none` to
-   * put them back into the table.
+   * Collapse bars are a screen-only affordance; never print them. For rows in
+   * a screen-collapsed gap, only restore the ones that are not explicitly
+   * disabled via the row visibility toggle.
    */
   table.patch tr.gap-bar {
     display: none !important;
   }
 
-  table.patch tr.gap-collapsed {
+  table.patch tr.gap-collapsed:not(.ignore) {
     display: table-row !important;
   }
 

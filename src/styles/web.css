@@ -140,8 +140,8 @@ table.patch td:nth-child(7) {
 
 /*
  * Gap-collapse bar. A thin clickable row that stands in for a run of empty
- * rows. Only shown on screen — print.css hides it and lets the empty rows
- * render as normal so printouts remain lossless.
+ * rows. Only shown on screen — print.css hides the bar and restores only the
+ * gap rows that are still marked visible.
  */
 table.patch tr.gap-bar {
   cursor: pointer;
@@ -200,9 +200,8 @@ table.patch tr.gap-bar:hover .gap-count {
 }
 
 /*
- * Rows inside a collapsed gap are kept in the DOM (so they still print and
- * keep their text/visibility state) but hidden from the screen layout.
- * print.css overrides this back to visible for the print stylesheet.
+ * Rows inside a collapsed gap are kept in the DOM so their visibility/text
+ * state survives collapse. print.css restores visible rows for printing.
  */
 table.patch tr.gap-collapsed {
   display: none;

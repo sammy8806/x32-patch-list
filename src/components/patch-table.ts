@@ -384,7 +384,7 @@ export class PatchTable extends LitElement {
   /**
    * Render one segment from `computeSegments`. Data segments just delegate to
    * `renderRow`. Gap segments always render their empty rows into the DOM
-   * (so `print.css` can let them through losslessly) and — when collapsible —
+   * (so collapse/expand does not discard row state) and — when collapsible —
    * add a clickable bar plus a `.gap-collapsed` class on the hidden rows when
    * the user hasn't expanded them.
    */
