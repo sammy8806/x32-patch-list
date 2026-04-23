@@ -191,7 +191,7 @@ export class PatchTable extends LitElement {
       const defaultVisible = chan !== null;
       const visible = this.isRowVisible(key, defaultVisible);
 
-      const userRouteKey = this.parser.getUserRoutePosition(
+      const userRouteKey = this.parser.getInputUserRoutePosition(
         `${this.patchType}.${String(lineIndex + 1).padStart(2, '0')}`,
       );
       const userRouteCell = renderUserRouteCell(userRouteKey);
@@ -300,7 +300,7 @@ export class PatchTable extends LitElement {
 
     const defaultVisible = row !== null;
     const visible = this.isRowVisible(key, defaultVisible);
-    const userRouteKey = this.parser.getUserRoutePosition(
+    const userRouteKey = this.parser.getOutputUserRoutePosition(
       `${this.patchType}.${String(lineIndex + 1).padStart(2, '0')}`,
     );
 

@@ -346,8 +346,21 @@ export class ScnParser {
     return entry?.user_route === true;
   }
 
-  /** User-route key (e.g. `user-in.04`) for a slot, or `null`. */
-  getUserRoutePosition(chan: string): string | null {
+  /**
+   * User-input slot (e.g. `user-in.04`) that points at the given source key.
+   *
+   * Input patch tables render source rows (`aes50a.01`, `card.25`, etc.), not
+   * route-slot rows, so they must resolve through `userRouteBySource` rather
+   * than `this.route`.
+   */
+  getInputUserRoutePosition(sourceKey: string): string | null {
+    const matches = this.userRouteBySource[sourceKey];
+    if (!matches) return null;
+    return matches.find((key) => key.startsWith('user-in.')) ?? null;
+  }
+
+  /** User-route key (e.g. `user-out.04`) for an output route slot, or `null`. */
+  getOutputUserRoutePosition(chan: string): string | null {
     return this.route[chan]?.user_route_key ?? null;
   }
 }

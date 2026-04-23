@@ -76,21 +76,24 @@ table.patch th:last-child {
 }
 
 /* In/Out; Line */
-table.patch td:nth-child(1) {
+table.patch td:nth-child(1),
+table.patch th:nth-child(1) {
   width: 1.8em;
   text-align: right;
   padding-right: 0.4em;
 }
 
 /* Line */
-table.patch td:nth-child(2) {
+table.patch td:nth-child(2),
+table.patch th:nth-child(2) {
   width: 4.8em;
   text-align: right;
   padding-right: 0.4em;
 }
 
 /* User Route */
-table.patch td:nth-child(3) {
+table.patch td:nth-child(3),
+table.patch th:nth-child(3) {
   width: 5em;
   text-align: right;
   padding-right: 0.4em;

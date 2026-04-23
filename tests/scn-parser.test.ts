@@ -71,7 +71,17 @@ describe('ScnParser routing', () => {
       /config/routing/AES50A/1-8 UOUT1-8
     `);
 
-    expect(parser.getUserRoutePosition('aes50a.01')).toBe('user-out.01');
-    expect(parser.getUserRoutePosition('aes50a.02')).toBe('user-out.02');
+    expect(parser.getOutputUserRoutePosition('aes50a.01')).toBe('user-out.01');
+    expect(parser.getOutputUserRoutePosition('aes50a.02')).toBe('user-out.02');
+  });
+
+  test('input user-route lookup ignores user-out mappings for shared source keys', () => {
+    const parser = parseScene(`
+      /config/userrout/in/01 129
+      /config/userrout/out/01 153
+    `);
+
+    expect(parser.getInputUserRoutePosition('card.01')).toBe('user-in.01');
+    expect(parser.getInputUserRoutePosition('card.25')).toBeNull();
   });
 });
