@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>V1 · Stacked Card — X32 Patch List</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* ---- shadcn tokens (light) ------------------------------------ */
+      :root {
+        --background: #ffffff;
+        --foreground: #09090b;
+        --card: #ffffff;
+        --card-foreground: #09090b;
+        --muted: #f4f4f5;
+        --muted-foreground: #71717a;
+        --border: #e4e4e7;
+        --input: #e4e4e7;
+        --ring: #18181b;
+        --primary: #18181b;
+        --primary-foreground: #fafafa;
+        --accent: #f4f4f5;
+        --accent-foreground: #18181b;
+        --success: #16a34a;
+        --radius: 0.625rem;
+        --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+        --font-mono: "Geist Mono", ui-monospace, monospace;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0; padding: 0;
+        background: var(--background);
+        color: var(--foreground);
+        font-family: var(--font-sans);
+        font-feature-settings: "cv11", "ss01";
+        -webkit-font-smoothing: antialiased;
+      }
+      body {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 1rem;
+        /* very subtle dot grid */
+        background-image: radial-gradient(var(--border) 1px, transparent 1px);
+        background-size: 28px 28px;
+        background-position: center center;
+      }
+      .wrap {
+        width: 100%;
+        max-width: 440px;
+      }
+      .wordmark {
+        display: flex; align-items: center; justify-content: center;
+        gap: 0.5rem;
+        margin-bottom: 1.25rem;
+        font-size: 0.8rem;
+        font-weight: 500;
+        letter-spacing: -0.01em;
+        color: var(--muted-foreground);
+      }
+      .wordmark .dot {
+        width: 6px; height: 6px; border-radius: 50%;
+        background: var(--success);
+        box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.12);
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 2rem;
+        box-shadow:
+          0 1px 2px 0 rgba(0, 0, 0, 0.03),
+          0 1px 3px 0 rgba(0, 0, 0, 0.02);
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.2rem 0.55rem;
+        font-size: 0.7rem;
+        font-weight: 500;
+        color: var(--muted-foreground);
+        background: var(--muted);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        letter-spacing: 0.01em;
+      }
+      .badge b {
+        color: var(--foreground); font-weight: 600;
+      }
+      h1 {
+        margin: 1rem 0 0.4rem;
+        font-size: 1.5rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        line-height: 1.15;
+      }
+      .lede {
+        margin: 0;
+        color: var(--muted-foreground);
+        font-size: 0.9rem;
+        line-height: 1.55;
+      }
+      .drop {
+        margin-top: 1.5rem;
+        border: 1px dashed var(--border);
+        border-radius: calc(var(--radius) - 2px);
+        padding: 1.75rem 1.25rem;
+        text-align: center;
+        background: var(--muted);
+        transition: all 150ms ease;
+        cursor: pointer;
+        display: block;
+      }
+      .drop:hover,
+      .drop.drag {
+        border-color: var(--ring);
+        background: var(--background);
+      }
+      .drop .icon {
+        width: 34px; height: 34px;
+        margin: 0 auto 0.6rem;
+        border-radius: 8px;
+        background: var(--background);
+        border: 1px solid var(--border);
+        display: flex; align-items: center; justify-content: center;
+        color: var(--muted-foreground);
+      }
+      .drop .title {
+        font-size: 0.9rem; font-weight: 500; color: var(--foreground);
+      }
+      .drop .sub {
+        font-size: 0.8rem; color: var(--muted-foreground);
+        margin-top: 0.2rem;
+        font-family: var(--font-mono);
+      }
+      input[type="file"] { display: none; }
+      .button {
+        margin-top: 1rem;
+        width: 100%;
+        display: inline-flex; align-items: center; justify-content: center;
+        gap: 0.5rem;
+        padding: 0.6rem 1rem;
+        font-family: var(--font-sans);
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--primary-foreground);
+        background: var(--primary);
+        border: 1px solid var(--primary);
+        border-radius: calc(var(--radius) - 2px);
+        cursor: pointer;
+        transition: background 140ms ease;
+      }
+      .button:hover { background: #27272a; }
+      .footer {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border);
+        display: flex;
+        align-items: center; justify-content: space-between;
+        font-size: 0.75rem;
+        color: var(--muted-foreground);
+      }
+      .footer code {
+        font-family: var(--font-mono);
+        font-size: 0.7rem;
+        padding: 0.1rem 0.35rem;
+        background: var(--muted);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+      }
+      .foot-mark {
+        text-align: center;
+        margin-top: 1.25rem;
+        font-size: 0.72rem;
+        color: var(--muted-foreground);
+        letter-spacing: 0.02em;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <div class="wordmark">
+        <span class="dot" aria-hidden="true"></span>
+        <span>X32 Patch List</span>
+      </div>
+
+      <section class="card">
+        <span class="badge">Step <b>1</b> of 3 · Upload</span>
+        <h1>Generate a printable patch list</h1>
+        <p class="lede">
+          Parse a Behringer X32 scene file. Everything stays in your
+          browser &mdash; no file is uploaded.
+        </p>
+
+        <label class="drop" id="dropwell">
+          <div class="icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 13v8" />
+              <path d="m8 17 4-4 4 4" />
+              <path d="M20.4 14.5A5 5 0 0 0 18 5h-1.3A8 8 0 1 0 4 14.5" />
+            </svg>
+          </div>
+          <div class="title">Drop a .scn file here</div>
+          <div class="sub">or click to browse</div>
+          <input type="file" accept=".scn,text/plain" id="picker" />
+        </label>
+
+        <button class="button" type="button"
+          onclick="document.getElementById('picker').click()">
+          Select file
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
+          </svg>
+        </button>
+
+        <div class="footer">
+          <span>Works offline</span>
+          <span><code>.scn</code> scene files only</span>
+        </div>
+      </section>
+
+      <div class="foot-mark">Ported from the legacy Flask app &middot; v2.0</div>
+    </main>
+
+    <script>
+      const well = document.getElementById("dropwell");
+      well.addEventListener("dragover", (e) => { e.preventDefault(); well.classList.add("drag"); });
+      well.addEventListener("dragleave", () => well.classList.remove("drag"));
+      well.addEventListener("drop", (e) => { e.preventDefault(); well.classList.remove("drag"); });
+    </script>
+  </body>
+</html>

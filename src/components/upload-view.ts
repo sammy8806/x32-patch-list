@@ -52,9 +52,17 @@ export class UploadView extends LitElement {
     ];
   }
 
-  override firstUpdated(): void {
-    // Auto-focus the card so ↑↓↵ work immediately on mount.
-    this.cardEl?.focus();
+  override connectedCallback(): void {
+    super.connectedCallback();
+    // Global keydown while the start screen is mounted. No element focus
+    // required → no focus ring on mount, and no interference with anything
+    // else once a scene is loaded (the listener is removed on unmount).
+    window.addEventListener('keydown', this.onKeyDown);
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    window.removeEventListener('keydown', this.onKeyDown);
   }
 
   override render() {
@@ -75,10 +83,8 @@ export class UploadView extends LitElement {
 
           <div
             class="cmd ${this.dragOver ? 'drag' : ''}"
-            tabindex="0"
             role="listbox"
             aria-label="Open scene file"
-            @keydown=${this.onKeyDown}
           >
             <div class="cmd-group">
               <div class="cmd-label">Actions</div>
@@ -180,7 +186,6 @@ export class UploadView extends LitElement {
       case 'Escape':
         e.preventDefault();
         this.activeIndex = 0;
-        this.cardEl?.blur();
         break;
     }
   };
@@ -237,10 +242,6 @@ export class UploadView extends LitElement {
   }
 
   // ---------------- DOM refs ----------------
-
-  private get cardEl(): HTMLElement | null {
-    return this.querySelector('.cmd');
-  }
 
   private get pickerEl(): HTMLInputElement | null {
     return this.querySelector<HTMLInputElement>('#picker');

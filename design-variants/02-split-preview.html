@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>V2 · Split + Preview — X32 Patch List</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --background: #ffffff;
+        --foreground: #09090b;
+        --muted: #f4f4f5;
+        --muted-foreground: #71717a;
+        --border: #e4e4e7;
+        --ring: #18181b;
+        --primary: #18181b;
+        --primary-foreground: #fafafa;
+        --success: #16a34a;
+        --radius: 0.625rem;
+        --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+        --font-mono: "Geist Mono", ui-monospace, monospace;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0; padding: 0;
+        background: var(--background);
+        color: var(--foreground);
+        font-family: var(--font-sans);
+        -webkit-font-smoothing: antialiased;
+        min-height: 100vh;
+      }
+      body {
+        display: grid;
+        place-items: center;
+        padding: 2rem 1.25rem;
+      }
+      .shell {
+        width: 100%;
+        max-width: 960px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--background);
+        overflow: hidden;
+        box-shadow:
+          0 1px 2px rgba(0, 0, 0, 0.03),
+          0 1px 3px rgba(0, 0, 0, 0.02);
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+      }
+      @media (max-width: 760px) {
+        .grid { grid-template-columns: 1fr; }
+      }
+      /* Left — copy + picker */
+      .left {
+        padding: 2.5rem 2.25rem;
+        border-right: 1px solid var(--border);
+        display: flex; flex-direction: column; gap: 1.25rem;
+      }
+      @media (max-width: 760px) {
+        .left { border-right: 0; border-bottom: 1px solid var(--border); }
+      }
+      .eyebrow {
+        display: inline-flex; align-items: center; gap: 0.45rem;
+        font-size: 0.72rem; font-weight: 500;
+        color: var(--muted-foreground);
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      .eyebrow .dot {
+        width: 6px; height: 6px; border-radius: 50%;
+        background: var(--success);
+        box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.12);
+      }
+      h1 {
+        margin: 0;
+        font-size: clamp(1.6rem, 2.8vw, 2rem);
+        font-weight: 600;
+        letter-spacing: -0.025em;
+        line-height: 1.1;
+      }
+      h1 .muted {
+        color: var(--muted-foreground); font-weight: 500;
+      }
+      .lede {
+        margin: 0;
+        color: var(--muted-foreground);
+        font-size: 0.95rem;
+        line-height: 1.55;
+        max-width: 34ch;
+      }
+      .drop {
+        border: 1px dashed var(--border);
+        background: var(--muted);
+        border-radius: calc(var(--radius) - 2px);
+        padding: 1.2rem 1rem;
+        display: flex; align-items: center; gap: 0.85rem;
+        cursor: pointer;
+        transition: all 150ms ease;
+      }
+      .drop:hover, .drop.drag {
+        border-color: var(--ring);
+        background: var(--background);
+      }
+      .drop .icon {
+        width: 36px; height: 36px; flex: none;
+        background: var(--background);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        display: grid; place-items: center;
+        color: var(--muted-foreground);
+      }
+      .drop .meta .title {
+        font-size: 0.9rem; font-weight: 500;
+      }
+      .drop .meta .sub {
+        font-size: 0.78rem; font-family: var(--font-mono);
+        color: var(--muted-foreground); margin-top: 0.15rem;
+      }
+      input[type="file"] { display: none; }
+      .actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+      .button {
+        display: inline-flex; align-items: center; gap: 0.45rem;
+        padding: 0.55rem 1rem;
+        font-size: 0.875rem; font-weight: 500;
+        border-radius: calc(var(--radius) - 2px);
+        border: 1px solid var(--primary);
+        background: var(--primary);
+        color: var(--primary-foreground);
+        cursor: pointer;
+        transition: background 140ms;
+      }
+      .button:hover { background: #27272a; }
+      .button.ghost {
+        background: transparent; color: var(--foreground);
+        border-color: var(--border);
+      }
+      .button.ghost:hover { background: var(--muted); }
+      .bullets {
+        margin: 0; padding: 0; list-style: none;
+        display: grid; gap: 0.4rem;
+        font-size: 0.8rem; color: var(--muted-foreground);
+      }
+      .bullets li { display: flex; align-items: center; gap: 0.55rem; }
+      .bullets svg { color: var(--foreground); }
+      /* Right — printed preview */
+      .right {
+        background:
+          linear-gradient(180deg, #fafafa 0%, #f4f4f5 100%);
+        padding: 2.5rem 2.25rem;
+        position: relative;
+      }
+      .right::before {
+        /* faint page edges for paper feel */
+        content: "";
+        position: absolute; inset: 1.75rem;
+        background: #ffffff;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        box-shadow:
+          0 1px 1px rgba(0, 0, 0, 0.03),
+          0 8px 20px rgba(0, 0, 0, 0.04);
+      }
+      .paper {
+        position: relative;
+        z-index: 1;
+        padding: 0.75rem 0.75rem;
+        font-family: var(--font-mono);
+        font-size: 0.7rem;
+        color: var(--foreground);
+        line-height: 1.45;
+        user-select: none;
+      }
+      .paper .doc-title {
+        font-family: var(--font-sans);
+        font-weight: 600;
+        font-size: 0.85rem;
+        letter-spacing: -0.01em;
+        border-bottom: 1px solid #000;
+        padding-bottom: 0.3rem;
+        margin-bottom: 0.6rem;
+      }
+      .paper .sec {
+        font-family: var(--font-sans);
+        font-weight: 600; font-size: 0.72rem;
+        margin: 0.6rem 0 0.25rem;
+        text-transform: uppercase; letter-spacing: 0.06em;
+      }
+      table.mini {
+        width: 100%; border-collapse: collapse;
+        margin-bottom: 0.25rem;
+      }
+      table.mini td, table.mini th {
+        border: 1px solid #111;
+        padding: 0.18rem 0.35rem;
+        font-size: 0.66rem;
+        vertical-align: middle;
+      }
+      table.mini th { text-align: left; background: #f4f4f5; font-weight: 500; }
+      table.mini td.c { width: 0.9rem; }
+      .sw { display: inline-block; width: 0.7rem; height: 0.7rem; border: 1px solid #000; vertical-align: middle; }
+      .sw-rd { background: #ff5050; }
+      .sw-gn { background: #30d37c; }
+      .sw-cy { background: #3fd0dc; }
+      .sw-bl { background: #4a7fe0; }
+      .sw-ye { background: #f1c84a; }
+      .sw-off { background: #111; }
+      /* printout corner crease */
+      .corner {
+        position: absolute; top: 1.75rem; right: 1.75rem;
+        width: 32px; height: 32px;
+        background: linear-gradient(225deg, var(--muted) 50%, transparent 50%);
+        border-top-right-radius: 4px;
+        z-index: 2;
+        box-shadow: -1px 1px 2px rgba(0, 0, 0, 0.06);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <div class="grid">
+        <section class="left">
+          <div class="eyebrow"><span class="dot"></span>Local only &middot; v2.0</div>
+          <h1>Scene in. <span class="muted">Patch list out.</span></h1>
+          <p class="lede">
+            Drop an X32 <code>.scn</code> file and get a clean, printable
+            patch list in one step. Nothing leaves your machine.
+          </p>
+
+          <label class="drop" id="dropwell">
+            <div class="icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/>
+                <path d="M14 2v6h6"/><path d="M10 13h4"/><path d="M10 17h4"/>
+              </svg>
+            </div>
+            <div class="meta">
+              <div class="title">Drop a .scn file here</div>
+              <div class="sub">or pick one from disk</div>
+            </div>
+            <input type="file" accept=".scn,text/plain" id="picker" />
+          </label>
+
+          <div class="actions">
+            <button class="button" type="button"
+              onclick="document.getElementById('picker').click()">
+              Select file
+            </button>
+            <button class="button ghost" type="button">Try a sample</button>
+          </div>
+
+          <ul class="bullets">
+            <li>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 6 9 17l-5-5"/>
+              </svg>
+              Notes, toggles, titles are saved per scene
+            </li>
+            <li>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 6 9 17l-5-5"/>
+              </svg>
+              Works offline &mdash; installable as a PWA
+            </li>
+            <li>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 6 9 17l-5-5"/>
+              </svg>
+              Export as JSON, or print straight to paper
+            </li>
+          </ul>
+        </section>
+
+        <aside class="right" aria-hidden="true">
+          <div class="corner"></div>
+          <div class="paper">
+            <div class="doc-title">FOH &middot; Sunday service &middot; 2026-04-26</div>
+            <div class="sec">Channels 1&ndash;8</div>
+            <table class="mini">
+              <thead>
+                <tr><th>#</th><th>Name</th><th>Source</th><th class="c"></th></tr>
+              </thead>
+              <tbody>
+                <tr><td>01</td><td>Kick In</td><td>Stage L</td><td class="c"><span class="sw sw-rd"></span></td></tr>
+                <tr><td>02</td><td>Kick Out</td><td>Stage L</td><td class="c"><span class="sw sw-rd"></span></td></tr>
+                <tr><td>03</td><td>Snare</td><td>Stage L</td><td class="c"><span class="sw sw-ye"></span></td></tr>
+                <tr><td>04</td><td>Hi-Hat</td><td>Stage L</td><td class="c"><span class="sw sw-ye"></span></td></tr>
+                <tr><td>05</td><td>Tom 1</td><td>Stage L</td><td class="c"><span class="sw sw-gn"></span></td></tr>
+                <tr><td>06</td><td>Tom 2</td><td>Stage L</td><td class="c"><span class="sw sw-gn"></span></td></tr>
+                <tr><td>07</td><td>OH L</td><td>Stage R</td><td class="c"><span class="sw sw-cy"></span></td></tr>
+                <tr><td>08</td><td>OH R</td><td>Stage R</td><td class="c"><span class="sw sw-cy"></span></td></tr>
+              </tbody>
+            </table>
+            <div class="sec">Mix bus</div>
+            <table class="mini">
+              <thead>
+                <tr><th>Bus</th><th>Name</th><th>Out</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>01</td><td>Wedge 1</td><td>XLR 1</td></tr>
+                <tr><td>02</td><td>Wedge 2</td><td>XLR 2</td></tr>
+                <tr><td>03</td><td>Drum fill</td><td>XLR 3</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </aside>
+      </div>
+    </main>
+
+    <script>
+      const well = document.getElementById("dropwell");
+      well.addEventListener("dragover", (e) => { e.preventDefault(); well.classList.add("drag"); });
+      well.addEventListener("dragleave", () => well.classList.remove("drag"));
+      well.addEventListener("drop", (e) => { e.preventDefault(); well.classList.remove("drag"); });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>V4 · Editorial — X32 Patch List</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --background: #fdfdfc;
+        --foreground: #09090b;
+        --muted: #f4f4f5;
+        --muted-foreground: #71717a;
+        --border: #e4e4e7;
+        --rule: #18181b;
+        --ring: #18181b;
+        --primary: #18181b;
+        --primary-foreground: #fafafa;
+        --success: #16a34a;
+        --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+        --font-serif: "Fraunces", ui-serif, Georgia, serif;
+        --font-mono: "Geist Mono", ui-monospace, monospace;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0; padding: 0;
+        background: var(--background);
+        color: var(--foreground);
+        font-family: var(--font-sans);
+        -webkit-font-smoothing: antialiased;
+      }
+      body {
+        min-height: 100vh;
+        display: flex; flex-direction: column;
+      }
+      /* Top masthead */
+      header.mast {
+        display: flex; justify-content: space-between; align-items: baseline;
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid var(--rule);
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
+        color: var(--muted-foreground);
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      header.mast .m-left { display: flex; gap: 1rem; align-items: baseline; }
+      header.mast .m-left b {
+        color: var(--foreground);
+        font-weight: 500;
+        letter-spacing: 0.06em;
+      }
+      main.wrap {
+        flex: 1;
+        padding: clamp(2.5rem, 7vw, 5rem) clamp(1.25rem, 6vw, 5rem);
+        max-width: 1080px;
+        margin: 0 auto;
+        width: 100%;
+      }
+      .issue-line {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 1rem;
+        align-items: end;
+        padding-bottom: 0.4rem;
+        border-bottom: 1px solid var(--rule);
+        margin-bottom: 1.25rem;
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
+        color: var(--muted-foreground);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .issue-line .num b {
+        color: var(--foreground); font-weight: 500;
+      }
+      h1.hero {
+        font-family: var(--font-serif);
+        font-weight: 500;
+        font-size: clamp(3rem, 8vw, 6rem);
+        line-height: 0.92;
+        letter-spacing: -0.035em;
+        margin: 0;
+        font-variation-settings: "opsz" 100, "SOFT" 50;
+      }
+      h1.hero em {
+        font-style: italic;
+        font-weight: 400;
+        color: var(--muted-foreground);
+      }
+      .deck {
+        margin: 1.5rem 0 2.5rem;
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        gap: 2rem;
+        align-items: start;
+      }
+      @media (max-width: 700px) {
+        .deck { grid-template-columns: 1fr; gap: 1rem; }
+      }
+      .deck .byline {
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        color: var(--muted-foreground);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      .deck .byline b {
+        color: var(--foreground);
+        font-weight: 500;
+      }
+      .deck .lede {
+        font-family: var(--font-serif);
+        font-size: clamp(1.05rem, 1.8vw, 1.3rem);
+        line-height: 1.5;
+        color: var(--foreground);
+        margin: 0;
+        font-variation-settings: "opsz" 14;
+      }
+      .deck .lede .first::first-letter {
+        font-family: var(--font-serif);
+        font-weight: 500;
+        font-size: 3em;
+        float: left;
+        line-height: 0.9;
+        padding: 0.08em 0.08em 0 0;
+      }
+      /* Drop zone as full-width editorial frame */
+      .frame {
+        display: block;
+        border: 1px solid var(--rule);
+        padding: 2.5rem 2rem;
+        cursor: pointer;
+        transition: background 160ms ease;
+        position: relative;
+      }
+      .frame:hover, .frame.drag {
+        background: var(--muted);
+      }
+      .frame .row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 2rem;
+        align-items: center;
+      }
+      @media (max-width: 600px) {
+        .frame .row { grid-template-columns: 1fr; }
+      }
+      .frame .headline {
+        font-family: var(--font-serif);
+        font-weight: 500;
+        font-size: clamp(1.4rem, 3vw, 2rem);
+        letter-spacing: -0.02em;
+        line-height: 1.1;
+        margin: 0 0 0.35rem;
+      }
+      .frame .caption {
+        margin: 0;
+        color: var(--muted-foreground);
+        font-size: 0.9rem;
+      }
+      .frame .button {
+        display: inline-flex; align-items: center; gap: 0.5rem;
+        padding: 0.6rem 1.1rem;
+        font-family: var(--font-sans);
+        font-size: 0.875rem; font-weight: 500;
+        background: var(--primary); color: var(--primary-foreground);
+        border: 1px solid var(--primary);
+        border-radius: 0;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .frame .button:hover { background: #27272a; }
+      input[type="file"] { display: none; }
+      /* Colophon row */
+      .colophon {
+        margin-top: 2.5rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--rule);
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
+        color: var(--muted-foreground);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      @media (max-width: 700px) {
+        .colophon { grid-template-columns: 1fr; }
+      }
+      .colophon b { color: var(--foreground); font-weight: 500; }
+      .colophon .col { display: grid; gap: 0.2rem; }
+      footer.foot {
+        padding: 1rem 1.5rem;
+        border-top: 1px solid var(--rule);
+        display: flex; justify-content: space-between; align-items: center;
+        font-family: var(--font-mono);
+        font-size: 0.7rem;
+        color: var(--muted-foreground);
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      footer.foot .dot {
+        display: inline-block;
+        width: 6px; height: 6px; border-radius: 50%;
+        background: var(--success);
+        margin-right: 0.4rem;
+        vertical-align: middle;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="mast">
+      <div class="m-left">
+        <b>X32 &middot; Patch List</b>
+        <span>Printable edition</span>
+      </div>
+      <div>Vol. II &middot; No. 00</div>
+    </header>
+
+    <main class="wrap">
+      <div class="issue-line">
+        <div class="num">Issue <b>001</b></div>
+        <div style="text-align: center;">&mdash;</div>
+        <div>2026 &middot; Apr. 23</div>
+      </div>
+
+      <h1 class="hero">Scene&nbsp;in.<br /><em>Patch list out.</em></h1>
+
+      <div class="deck">
+        <div class="byline">
+          <div><b>What this does</b></div>
+          <div>A tiny utility</div>
+          <div>for FOH &amp; monitors</div>
+        </div>
+        <p class="lede">
+          <span class="first">D</span>rop a Behringer X32 scene file on the frame below
+          and get back a neat, printable patch list. Titles, remarks, and row
+          toggles are saved per&ndash;scene, and everything stays on your
+          machine. Print it, tape it to the desk, hand it to the tech.
+        </p>
+      </div>
+
+      <label class="frame" id="frame">
+        <div class="row">
+          <div>
+            <h2 class="headline">Drop a .scn file to begin</h2>
+            <p class="caption">Or click the button. No upload &mdash; all parsing happens locally.</p>
+          </div>
+          <button type="button" class="button"
+            onclick="document.getElementById('picker').click(); event.stopPropagation();">
+            Select file
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+            </svg>
+          </button>
+          <input type="file" accept=".scn,text/plain" id="picker" />
+        </div>
+      </label>
+
+      <div class="colophon">
+        <div class="col"><span>Privacy</span><b>100% on-device</b></div>
+        <div class="col"><span>Works offline</span><b>Installable PWA</b></div>
+        <div class="col"><span>Exports</span><b>Print &middot; JSON</b></div>
+      </div>
+    </main>
+
+    <footer class="foot">
+      <div><span class="dot"></span> Local bus &middot; never uplinked</div>
+      <div>v2.0 &middot; Lit + plain CSS</div>
+    </footer>
+
+    <script>
+      const frame = document.getElementById("frame");
+      frame.addEventListener("dragover", (e) => { e.preventDefault(); frame.classList.add("drag"); });
+      frame.addEventListener("dragleave", () => frame.classList.remove("drag"));
+      frame.addEventListener("drop", (e) => { e.preventDefault(); frame.classList.remove("drag"); });
+    </script>
+  </body>
+</html>
