@@ -156,7 +156,7 @@ export class PatchTable extends LitElement {
         <thead>
           <tr>
             <th>Input</th>
-            <th>Desk</th>
+            <th>Channel</th>
             <th>User Route</th>
             <th></th>
             <th>Name</th>
@@ -391,7 +391,7 @@ function renderUserRouteCell(userRouteKey: string | null) {
   const parts = userRouteKey.split('.');
   const userRoutePos = parts[1] ?? '';
   const userRouteType = userRouteKey.includes('in') ? 'I' : 'O';
-  const text = `${userRoutePos ? `${userRouteType}-${userRoutePos} ` : ''}X`;
+  const text = userRoutePos ? `${userRouteType}-${userRoutePos}` : '';
   return html`<td>${text}</td>`;
 }
 
