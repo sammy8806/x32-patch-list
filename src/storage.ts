@@ -77,6 +77,34 @@ export function lastFilename(): string | null {
   return read().lastFilename ?? null;
 }
 
+export interface RecentFile {
+  sessionId: string;
+  filename: string;
+}
+
+/**
+ * Derive a list of recent files from stored sessions. The last-used session
+ * is returned first; remaining entries follow in the order `Object.entries`
+ * yields them (insertion order for string keys).
+ *
+ * Future: once scene contents are persisted, each entry will be directly
+ * re-openable. For now the filename is purely a memory aid — clicking one
+ * still prompts the file picker.
+ */
+export function recentFiles(limit = 5): RecentFile[] {
+  const root = read();
+  const lastId = root.lastSessionId;
+  const entries = Object.entries(root.sessions);
+  entries.sort(([a], [b]) => {
+    if (a === lastId) return -1;
+    if (b === lastId) return 1;
+    return 0;
+  });
+  return entries
+    .slice(0, limit)
+    .map(([sessionId, s]) => ({ sessionId, filename: s.filename }));
+}
+
 export function clearAll(): void {
   try {
     localStorage.removeItem(ROOT_KEY);

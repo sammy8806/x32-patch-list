@@ -53,42 +53,196 @@
   padding: 1rem;
 }
 
-/* Upload view */
-.upload {
-  max-width: 28rem;
-  margin: 4rem auto;
-  padding: 2rem;
-  text-align: center;
-  background: var(--surface);
-  border: 2px dashed var(--border);
-  border-radius: var(--radius);
+/* Start screen is full-bleed — drop main padding only when it's present. */
+.shell:has(x32-upload) .shell-main {
+  padding: 0;
 }
 
-.upload.drag-over {
-  border-color: var(--accent);
-  background: rgba(45, 108, 223, 0.05);
+/* ---------- Start screen (upload view) ----------
+ * Uses a locally-scoped token set so the near-white aesthetic doesn't
+ * conflict with the app's hard-edged `--border: #000` used by buttons,
+ * the patch table, etc.
+ */
+.start {
+  --start-bg: #ffffff;
+  --start-fg: #09090b;
+  --start-muted-fg: #71717a;
+  --start-muted-bg: #f4f4f5;
+  --start-border: #e4e4e7;
+  --start-ring: #18181b;
+
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  gap: 1.25rem;
+  position: relative;
+  background-color: var(--start-bg);
+  /* faint grid */
+  background-image:
+    linear-gradient(var(--start-border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--start-border) 1px, transparent 1px);
+  background-size: 48px 48px;
+  background-position: center center;
 }
 
-.upload h1 {
-  margin-top: 0;
+.start::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 0%, var(--start-bg) 75%);
+}
+
+.start-main {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 560px;
+}
+
+.start h1 {
+  margin: 0 0 0.3rem;
   font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--start-fg);
 }
 
-.upload p {
-  color: var(--muted);
+.start .lede {
+  margin: 0 0 1.25rem;
+  color: var(--start-muted-fg);
+  font-size: 0.9rem;
 }
 
-.upload input[type="file"] {
-  display: block;
-  margin: 1rem auto 0;
+.start code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.82em;
+  padding: 0.05em 0.3em;
+  background: var(--start-muted-bg);
+  border-radius: 4px;
 }
 
-.upload .hint {
-  margin-top: 1rem;
-  font-size: 0.9em;
+.start input[type="file"] {
+  display: none;
 }
 
-.upload .error {
+.start .error {
+  margin-top: 0.75rem;
   color: var(--danger);
-  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+/* Command card */
+.cmd {
+  border: 1px solid var(--start-border);
+  border-radius: 12px;
+  background: var(--start-bg);
+  overflow: hidden;
+  outline: none;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.03),
+    0 10px 30px -10px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 180ms, border-color 180ms;
+}
+
+.cmd:focus,
+.cmd.drag {
+  border-color: var(--start-ring);
+  box-shadow:
+    0 0 0 4px rgba(24, 24, 27, 0.05),
+    0 1px 2px rgba(0, 0, 0, 0.03),
+    0 14px 40px -10px rgba(0, 0, 0, 0.1);
+}
+
+.cmd-group {
+  padding: 0.5rem;
+}
+
+.cmd-label {
+  padding: 0.45rem 0.65rem 0.3rem;
+  font-size: 0.7rem;
+  color: var(--start-muted-fg);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cmd-item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  color: var(--start-fg);
+  user-select: none;
+}
+
+.cmd-item .ico {
+  width: 18px;
+  height: 18px;
+  color: var(--start-muted-fg);
+  flex: none;
+}
+
+.cmd-item .hint {
+  margin-left: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem;
+  color: var(--start-muted-fg);
+}
+
+.cmd-item:hover,
+.cmd-item.active {
+  background: var(--start-muted-bg);
+}
+
+.cmd-item.active .ico {
+  color: var(--start-fg);
+}
+
+.cmd-sep {
+  height: 1px;
+  background: var(--start-border);
+  margin: 0.25rem 0;
+}
+
+.cmd-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.55rem 0.8rem;
+  border-top: 1px solid var(--start-border);
+  background: var(--start-muted-bg);
+  font-size: 0.72rem;
+  color: var(--start-muted-fg);
+}
+
+.cmd-footer .keys {
+  display: flex;
+  gap: 0.9rem;
+  align-items: center;
+}
+
+.cmd-footer .keys span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.4rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.72rem;
+  color: var(--start-muted-fg);
+  background: var(--start-muted-bg);
+  border: 1px solid var(--start-border);
+  border-radius: 4px;
 }

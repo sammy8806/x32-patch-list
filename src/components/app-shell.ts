@@ -15,11 +15,12 @@ import type { SceneSelectedDetail } from './upload-view.js';
 
 import { ScnParser } from '../parser/scn-parser.js';
 import {
-  lastFilename,
   loadSession,
   makeEmptyState,
+  recentFiles,
   saveSession,
   sessionIdFor,
+  type RecentFile,
   type SessionState,
 } from '../storage.js';
 
@@ -38,11 +39,11 @@ export class AppShell extends LitElement {
   @state() private parser: ScnParser | null = null;
   @state() private session: SessionState | null = null;
   @state() private sessionId: string | null = null;
-  @state() private lastFilenameHint: string | null = null;
+  @state() private recentFilesList: RecentFile[] = [];
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.lastFilenameHint = lastFilename();
+    this.recentFilesList = recentFiles();
 
     this.addEventListener('scene-selected', this.onSceneSelected as EventListener);
     this.addEventListener('title-changed', this.onTitleChanged as EventListener);
@@ -66,7 +67,7 @@ export class AppShell extends LitElement {
       return html`
         <div class="shell">
           <main class="shell-main">
-            <x32-upload .lastFilename=${this.lastFilenameHint}></x32-upload>
+            <x32-upload .recentFiles=${this.recentFilesList}></x32-upload>
           </main>
         </div>
       `;
@@ -118,6 +119,8 @@ export class AppShell extends LitElement {
     this.parser = null;
     this.session = null;
     this.sessionId = null;
+    // Refresh so the session we just closed appears at the top of "Recent".
+    this.recentFilesList = recentFiles();
   };
 
   private onExportJson = () => {
