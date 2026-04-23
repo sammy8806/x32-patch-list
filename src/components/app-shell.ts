@@ -20,7 +20,6 @@ import { ScnParser } from '../parser/scn-parser.js';
 import {
   loadScene,
   loadSession,
-  lastSessionId,
   makeEmptyState,
   recentFiles,
   saveSession,
@@ -247,11 +246,6 @@ export class AppShell extends LitElement {
     const hintedSessionId = this.urlSessionId();
     if (hintedSessionId && this.openStoredSession(hintedSessionId, false)) {
       return;
-    }
-
-    const lastId = lastSessionId();
-    if (lastId) {
-      this.openStoredSession(lastId);
     }
   }
 
