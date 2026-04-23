@@ -44,8 +44,38 @@ export class PatchTable extends LitElement {
 
   @state() private sectionKey = '';
 
+  private onWindowResize = () => this.resizeAllTextareas();
+
   override willUpdate(): void {
     this.sectionKey = `${this.variant}:${this.patchType}`;
+  }
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    window.addEventListener('resize', this.onWindowResize);
+  }
+
+  override disconnectedCallback(): void {
+    window.removeEventListener('resize', this.onWindowResize);
+    super.disconnectedCallback();
+  }
+
+  /**
+   * Resizes every textarea in this table to fit its content.
+   *
+   * Called from `updated()` (so it fires on first paint and on every state
+   * change — e.g. when `rowText` is restored from storage on reload) and
+   * from the window resize listener (so layout-width changes reflow too).
+   *
+   * Without this, textareas stay at their CSS default of `height: 1em` +
+   * `overflow: hidden` and clip multi-line content.
+   */
+  private resizeAllTextareas(): void {
+    this.querySelectorAll<HTMLTextAreaElement>('textarea').forEach(autoResize);
+  }
+
+  override updated(): void {
+    this.resizeAllTextareas();
   }
 
   // ---------------- Key helpers ----------------
