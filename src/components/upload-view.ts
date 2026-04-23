@@ -12,8 +12,8 @@
  *   Home/End jump to first / last
  *
  * Recent files are shown only when storage has at least one prior session.
- * Until scene contents are persisted, activating a recent entry opens the
- * file picker just like "Open" — the filename is a memory aid, not a handle.
+ * Cached recent entries reopen directly from localStorage; legacy entries
+ * without cached scene contents still fall back to the file picker.
  */
 
 import { LitElement, html, nothing } from 'lit';
@@ -25,6 +25,10 @@ export interface SceneSelectedDetail {
   text: string;
   filename: string;
   size: number;
+}
+
+export interface RecentSelectedDetail {
+  sessionId: string;
 }
 
 type Item =
@@ -101,7 +105,7 @@ export class UploadView extends LitElement {
                     ${this.recentFiles.map((r, i) =>
                       this.renderItem(1 + i, {
                         label: r.filename,
-                        hint: 'Enter',
+                        hint: r.cached ? 'Cached' : 'Pick again',
                         icon: iconClock,
                       }),
                     )}
@@ -194,9 +198,16 @@ export class UploadView extends LitElement {
     const item = this.items[index];
     if (!item) return;
     this.activeIndex = index;
-    // Both "Open" and recent entries currently open the file picker.
-    // When content storage lands, `item.kind === 'recent'` will branch into
-    // a direct reopen path.
+    if (item.kind === 'recent' && item.recent.cached) {
+      this.dispatchEvent(
+        new CustomEvent<RecentSelectedDetail>('recent-selected', {
+          detail: { sessionId: item.recent.sessionId },
+          bubbles: true,
+          composed: true,
+        }),
+      );
+      return;
+    }
     this.pickerEl?.click();
   }
 

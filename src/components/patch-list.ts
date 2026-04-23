@@ -25,6 +25,7 @@ export class PatchList extends LitElement {
   @property({ attribute: false }) parser!: ScnParser;
   @property({ type: String }) override title = '';
   @property({ type: String }) originalFileName = '';
+  @property({ type: String }) sheetNotes = '';
   @property({ attribute: false }) rowText: Record<string, RowText> = {};
   @property({ attribute: false }) visibleRows: Record<string, boolean> = {};
   @property({ attribute: false }) visibleSections: Record<string, boolean> = {};
@@ -36,6 +37,8 @@ export class PatchList extends LitElement {
         <textarea
           rows="10"
           placeholder=${this.originalFileName}
+          .value=${this.sheetNotes}
+          @input=${this.onSheetNotesInput}
         ></textarea>
       </div>
 
@@ -66,6 +69,17 @@ export class PatchList extends LitElement {
       )}
     `;
   }
+
+  private onSheetNotesInput = (e: Event) => {
+    const value = (e.target as HTMLTextAreaElement).value;
+    this.dispatchEvent(
+      new CustomEvent('sheet-notes-changed', {
+        detail: value,
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  };
 }
 
 declare global {

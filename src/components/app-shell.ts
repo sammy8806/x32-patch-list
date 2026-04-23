@@ -11,11 +11,16 @@ import { customElement, state } from 'lit/decorators.js';
 import './upload-view.js';
 import './toolbar.js';
 import './patch-list.js';
-import type { SceneSelectedDetail } from './upload-view.js';
+import type {
+  RecentSelectedDetail,
+  SceneSelectedDetail,
+} from './upload-view.js';
 
 import { ScnParser } from '../parser/scn-parser.js';
 import {
+  loadScene,
   loadSession,
+  lastSessionId,
   makeEmptyState,
   recentFiles,
   saveSession,
@@ -23,6 +28,10 @@ import {
   type RecentFile,
   type SessionState,
 } from '../storage.js';
+import {
+  nextHrefForSession,
+  readSessionIdFromHref,
+} from '../url-state.js';
 
 type RowTextFieldChange = {
   key: string;
@@ -46,7 +55,9 @@ export class AppShell extends LitElement {
     this.recentFilesList = recentFiles();
 
     this.addEventListener('scene-selected', this.onSceneSelected as EventListener);
+    this.addEventListener('recent-selected', this.onRecentSelected as EventListener);
     this.addEventListener('title-changed', this.onTitleChanged as EventListener);
+    this.addEventListener('sheet-notes-changed', this.onSheetNotesChanged as EventListener);
     this.addEventListener('request-new-file', this.onRequestNewFile);
     this.addEventListener('export-json', this.onExportJson);
     this.addEventListener('print', this.onPrint);
@@ -60,6 +71,33 @@ export class AppShell extends LitElement {
       this.onSectionVisibilityChange as EventListener,
     );
     this.addEventListener('toggle-all-rows', this.onToggleAllRows as EventListener);
+    window.addEventListener('popstate', this.onPopState);
+    this.restoreInitialSession();
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.removeEventListener('scene-selected', this.onSceneSelected as EventListener);
+    this.removeEventListener('recent-selected', this.onRecentSelected as EventListener);
+    this.removeEventListener('title-changed', this.onTitleChanged as EventListener);
+    this.removeEventListener(
+      'sheet-notes-changed',
+      this.onSheetNotesChanged as EventListener,
+    );
+    this.removeEventListener('request-new-file', this.onRequestNewFile);
+    this.removeEventListener('export-json', this.onExportJson);
+    this.removeEventListener('print', this.onPrint);
+    this.removeEventListener('row-text-change', this.onRowTextChange as EventListener);
+    this.removeEventListener(
+      'row-visibility-change',
+      this.onRowVisibilityChange as EventListener,
+    );
+    this.removeEventListener(
+      'section-visibility-change',
+      this.onSectionVisibilityChange as EventListener,
+    );
+    this.removeEventListener('toggle-all-rows', this.onToggleAllRows as EventListener);
+    window.removeEventListener('popstate', this.onPopState);
   }
 
   override render() {
@@ -86,6 +124,7 @@ export class AppShell extends LitElement {
             .parser=${this.parser}
             .title=${this.session.title}
             .originalFileName=${this.session.filename}
+            .sheetNotes=${this.session.sheetNotes}
             .rowText=${this.session.rowText}
             .visibleRows=${this.session.visibleRows}
             .visibleSections=${this.session.visibleSections}
@@ -100,13 +139,12 @@ export class AppShell extends LitElement {
 
   private onSceneSelected = (e: CustomEvent<SceneSelectedDetail>) => {
     const { text, filename, size } = e.detail;
-    const parser = new ScnParser();
-    parser.parseText(text);
-    this.parser = parser;
     const id = sessionIdFor(filename, size);
-    this.sessionId = id;
-    this.session = loadSession(id) ?? makeEmptyState(filename);
-    this.persist();
+    this.openSession({ sessionId: id, filename, size, text });
+  };
+
+  private onRecentSelected = (e: CustomEvent<RecentSelectedDetail>) => {
+    this.openStoredSession(e.detail.sessionId);
   };
 
   private onTitleChanged = (e: CustomEvent<string>) => {
@@ -115,12 +153,14 @@ export class AppShell extends LitElement {
     });
   };
 
+  private onSheetNotesChanged = (e: CustomEvent<string>) => {
+    this.mutateSession((s) => {
+      s.sheetNotes = e.detail;
+    });
+  };
+
   private onRequestNewFile = () => {
-    this.parser = null;
-    this.session = null;
-    this.sessionId = null;
-    // Refresh so the session we just closed appears at the top of "Recent".
-    this.recentFilesList = recentFiles();
+    this.resetActiveSession();
   };
 
   private onExportJson = () => {
@@ -128,6 +168,7 @@ export class AppShell extends LitElement {
     const payload = {
       filename: this.session.filename,
       title: this.session.title,
+      sheetNotes: this.session.sheetNotes,
       routingSwitch: this.parser.routingSwitch,
       channels: this.parser.channels,
       route: this.parser.route,
@@ -189,7 +230,69 @@ export class AppShell extends LitElement {
     });
   };
 
+  private onPopState = () => {
+    const sessionId = this.urlSessionId();
+    if (!sessionId) {
+      this.resetActiveSession(false);
+      return;
+    }
+    if (!this.openStoredSession(sessionId, false)) {
+      this.resetActiveSession(false);
+    }
+  };
+
+  // ---------------- Session loading ----------------
+
+  private restoreInitialSession(): void {
+    const hintedSessionId = this.urlSessionId();
+    if (hintedSessionId && this.openStoredSession(hintedSessionId, false)) {
+      return;
+    }
+
+    const lastId = lastSessionId();
+    if (lastId) {
+      this.openStoredSession(lastId);
+    }
+  }
+
+  private openStoredSession(sessionId: string, syncUrl = true): boolean {
+    const scene = loadScene(sessionId);
+    if (!scene) return false;
+    try {
+      this.openSession({ sessionId, ...scene }, syncUrl);
+      return true;
+    } catch (err) {
+      console.warn('Could not reopen cached scene:', err);
+      return false;
+    }
+  }
+
+  private openSession(
+    scene: { sessionId: string; filename: string; size: number; text: string },
+    syncUrl = true,
+  ): void {
+    const parser = new ScnParser();
+    parser.parseText(scene.text);
+    this.parser = parser;
+    this.sessionId = scene.sessionId;
+    this.session = loadSession(scene.sessionId) ?? makeEmptyState(scene.filename);
+    this.persist({ filename: scene.filename, size: scene.size, text: scene.text });
+    if (syncUrl) {
+      this.syncUrl(scene.sessionId);
+    }
+  }
+
   // ---------------- State helpers ----------------
+
+  private resetActiveSession(syncUrl = true): void {
+    this.parser = null;
+    this.session = null;
+    this.sessionId = null;
+    this.recentFilesList = recentFiles();
+    if (syncUrl) {
+      this.syncUrl(null);
+    }
+  }
 
   private mutateSession(mutator: (s: SessionState) => void): void {
     if (!this.session) return;
@@ -204,9 +307,22 @@ export class AppShell extends LitElement {
     this.persist();
   }
 
-  private persist(): void {
+  private persist(scene?: { filename: string; size: number; text: string }): void {
     if (this.sessionId && this.session) {
-      saveSession(this.sessionId, this.session);
+      saveSession(this.sessionId, this.session, scene);
+      this.recentFilesList = recentFiles();
+    }
+  }
+
+  private urlSessionId(): string | null {
+    return readSessionIdFromHref(window.location.href);
+  }
+
+  private syncUrl(sessionId: string | null): void {
+    const next = nextHrefForSession(window.location.href, sessionId);
+    const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    if (next !== current) {
+      window.history.replaceState(null, '', next);
     }
   }
 }
