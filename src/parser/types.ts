@@ -23,6 +23,9 @@ export interface Channel {
   /** For input strips: 1-based channel index. */
   channel_index?: number;
 
+  /** For input strips: whether the routed physical preamp has +48V enabled. */
+  phantom_power?: boolean;
+
   /** For mix-style channels: the mix family (`bus`, `main`, `mtx`, `fxrtn`). */
   mix?: string;
 

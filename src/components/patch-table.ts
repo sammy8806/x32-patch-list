@@ -237,7 +237,12 @@ export class PatchTable extends LitElement {
       return html`
         <tr class=${classMap({ [parity]: true, ignore: !visible, ...extraClasses })}>
           <td>${subIndex === 0 ? getSourceIndex(this.patchType, lineIndex + 1) : ''}</td>
-          <td>${getDeskName(chan)}</td>
+          <td>
+            ${getDeskName(chan)}
+            ${chan?.phantom_power
+              ? html`<span class="phantom-indicator" title="+48V phantom power">48V</span>`
+              : null}
+          </td>
           ${userRouteCell}
           <td class=${`colour col-${chan?.color ?? 'OFF'}`}></td>
           <td>${chan?.name ?? ''}</td>

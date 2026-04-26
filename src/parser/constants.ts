@@ -82,3 +82,5 @@ export const USERROUTING_RE = /^\/config\/userrout\/(in|out)/;
 export const ROUTESWITCH_RE = /^\/config\/routing\/routswitch$/;
 
 export const OUTPUTS_RE = /^\/outputs\/(aux|aes|main|p16)\/([0-3][0-9])$/;
+
+export const HEADAMP_PHANTOM_RE = /^\/headamp\/([0-9]{3})\/phantom$/;

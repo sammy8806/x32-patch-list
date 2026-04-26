@@ -11,6 +11,7 @@
 
 import {
   CONFIG_RE,
+  HEADAMP_PHANTOM_RE,
   INPUT_CONFIG_TYPES,
   MAX_CHANNELS,
   MAX_OUTPUTS,
@@ -46,6 +47,7 @@ export class ScnParser {
   outputRouteSource: Record<string, string> = {};
   userRouteByName: Record<string, string | null> = {};
   userRouteBySource: Record<string, string[]> = {};
+  phantomPowerBySource: Record<string, boolean> = {};
   inputRoute: { IN: Record<string, RouteEntry>; PLAY: Record<string, RouteEntry> } = {
     IN: {},
     PLAY: {},
@@ -64,6 +66,8 @@ export class ScnParser {
 
       if (ROUTESWITCH_RE.test(head)) {
         this.parseRouteSwitch(tokens);
+      } else if (HEADAMP_PHANTOM_RE.test(head)) {
+        this.parseHeadampPhantom(tokens);
       } else if (ROUTING_RE.test(head)) {
         this.parseRouting(tokens);
       } else if (CONFIG_RE.test(head)) {
@@ -76,6 +80,7 @@ export class ScnParser {
     }
 
     this.applyActiveInputRouting();
+    this.applyPhantomPowerToChannels();
 
     // Synthesized channels for the internal virtual sources.
     this.channels.tb = { name: 'Talkback', color: 'INT', internal: 'tb' };
@@ -93,6 +98,7 @@ export class ScnParser {
     this.outputRouteSource = {};
     this.userRouteByName = {};
     this.userRouteBySource = {};
+    this.phantomPowerBySource = {};
     this.inputRoute = { IN: {}, PLAY: {} };
     this.routingSwitch = 'IN';
   }
@@ -115,6 +121,23 @@ export class ScnParser {
         (this.userRouteBySource[item] ??= []).push(name);
       }
     });
+  }
+
+  private sourceFromHeadampIndex(index: number): string | null {
+    if (index >= 0 && index <= 31) return `in.${pad2(index + 1)}`;
+    if (index >= 32 && index <= 79) return `aes50a.${pad2(index - 31)}`;
+    if (index >= 80 && index <= 127) return `aes50b.${pad2(index - 79)}`;
+    return null;
+  }
+
+  private parseHeadampPhantom(tokens: string[]): void {
+    const match = tokens[0].match(HEADAMP_PHANTOM_RE);
+    if (!match || tokens.length < 2) return;
+
+    const source = this.sourceFromHeadampIndex(parseInt(match[1], 10));
+    if (!source) return;
+
+    this.phantomPowerBySource[source] = tokens[1] === 'ON' || tokens[1] === '1';
   }
 
   private buildRouteEntry(
@@ -176,6 +199,16 @@ export class ScnParser {
       if (routeSource) {
         (this.inputRouteSource[routeSource] ??= []).push(routePath);
       }
+    }
+  }
+
+  private applyPhantomPowerToChannels(): void {
+    for (const channel of Object.values(this.channels)) {
+      if (!channel.route_key) continue;
+      const source = this.route[channel.route_key]?.source_key;
+      channel.phantom_power = source
+        ? this.phantomPowerBySource[source] === true
+        : false;
     }
   }
 

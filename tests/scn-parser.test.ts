@@ -115,4 +115,18 @@ describe('ScnParser routing', () => {
     expect(row.color).toBe('OFF');
     expect(row.output_source_label).toBe('Local 01');
   });
+
+  test('input channels expose phantom power from routed physical preamps', () => {
+    const parser = parseScene(`
+      /headamp/032/phantom ON
+      /headamp/033/phantom OFF
+      /config/routing/IN/1-8 A1-8
+      /ch/01/config Vocal 0 RD 1
+      /ch/02/config Guitar 0 BL 2
+    `);
+
+    const aes = parser.getChannelListForType('aes50a');
+    expect(aes[0]?.[0]?.phantom_power).toBe(true);
+    expect(aes[1]?.[0]?.phantom_power).toBe(false);
+  });
 });
