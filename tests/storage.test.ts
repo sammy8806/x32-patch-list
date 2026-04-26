@@ -4,9 +4,11 @@ import {
   clearAll,
   findCachedScenesByFilename,
   lastSessionId,
+  listCommentMigrationSources,
   loadScene,
   loadSession,
   makeEmptyState,
+  mergeRowTextComments,
   recentFiles,
   saveSession,
   sessionIdFor,
@@ -189,5 +191,107 @@ describe('storage', () => {
         updatedAt: 0,
       },
     ]);
+  });
+
+  test('lists saved comment sources with likely successors first', () => {
+    const originalDateNow = Date.now;
+
+    try {
+      const currentId = sessionIdFor('tour-2026-04-23.scn', '/current');
+      const sameShowId = sessionIdFor('tour-2026-04-16.scn', '/same-show');
+      const exactNameId = sessionIdFor('tour-2026-04-23.scn', '/exact-name-old');
+      const otherId = sessionIdFor('festival.scn', '/other');
+
+      Date.now = () => 100;
+      saveSession(sameShowId, {
+        ...makeEmptyState('tour-2026-04-16.scn'),
+        rowText: {
+          'input:in:0:0': { remarks: 'Lead vocal RF' },
+        },
+      });
+
+      Date.now = () => 200;
+      saveSession(otherId, {
+        ...makeEmptyState('festival.scn'),
+        rowText: {
+          'output:out:0:0': { source: 'Stage rack 1' },
+        },
+      });
+
+      Date.now = () => 300;
+      saveSession(exactNameId, {
+        ...makeEmptyState('tour-2026-04-23.scn'),
+        rowText: {
+          'input:in:1:0': { remarks: 'Spare handheld' },
+        },
+      });
+
+      Date.now = () => 400;
+      saveSession(currentId, {
+        ...makeEmptyState('tour-2026-04-23.scn'),
+        rowText: {
+          'input:in:2:0': { remarks: '' },
+        },
+      });
+
+      expect(
+        listCommentMigrationSources(currentId, 'tour-2026-04-23.scn'),
+      ).toEqual([
+        {
+          sessionId: exactNameId,
+          filename: 'tour-2026-04-23.scn',
+          updatedAt: 300,
+          commentRowCount: 1,
+        },
+        {
+          sessionId: sameShowId,
+          filename: 'tour-2026-04-16.scn',
+          updatedAt: 100,
+          commentRowCount: 1,
+        },
+        {
+          sessionId: otherId,
+          filename: 'festival.scn',
+          updatedAt: 200,
+          commentRowCount: 1,
+        },
+      ]);
+    } finally {
+      Date.now = originalDateNow;
+    }
+  });
+
+  test('merges comments without overwriting existing current text', () => {
+    expect(
+      mergeRowTextComments(
+        {
+          'input:in:0:0': { source: 'Current source' },
+          'input:in:1:0': { remarks: '   ' },
+          'input:in:2:0': { remarks: 'Keep me' },
+        },
+        {
+          'input:in:0:0': { source: 'Old source', remarks: 'Copy remarks' },
+          'input:in:1:0': { remarks: 'Copied into blank field' },
+          'input:in:2:0': { source: 'Added source', remarks: 'Ignored remarks' },
+          'output:out:0:0': { source: 'Stagebox 1' },
+          'output:out:1:0': { source: '   ' },
+        },
+      ),
+    ).toEqual({
+      rowText: {
+        'input:in:0:0': {
+          source: 'Current source',
+          remarks: 'Copy remarks',
+        },
+        'input:in:1:0': { remarks: 'Copied into blank field' },
+        'input:in:2:0': {
+          source: 'Added source',
+          remarks: 'Keep me',
+        },
+        'output:out:0:0': { source: 'Stagebox 1' },
+      },
+      importedRows: 4,
+      importedFields: 4,
+    });
   });
 });

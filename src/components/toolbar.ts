@@ -4,11 +4,12 @@
  * Sticky top bar shown once a scene is loaded. Contains:
  *   - filename label (click to pick a different file)
  *   - title input (wide)
+ *   - Migrate Comments
  *   - Export JSON
  *   - Print
  *
- * Emits: `title-changed` (detail: string), `request-new-file`, `export-json`,
- * `print`.
+ * Emits: `title-changed` (detail: string), `request-new-file`,
+ * `request-comment-migration`, `export-json`, `print`.
  */
 
 import { LitElement, html } from 'lit';
@@ -39,6 +40,12 @@ export class Toolbar extends LitElement {
           .value=${this.title}
           @input=${this.onTitleInput}
         />
+        <button
+          type="button"
+          @click=${() => this.emit('request-comment-migration')}
+        >
+          Migrate Comments
+        </button>
         <button type="button" @click=${() => this.emit('export-json')}>
           Export JSON
         </button>

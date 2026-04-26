@@ -19,12 +19,15 @@ import type {
 import { ScnParser } from '../parser/scn-parser.js';
 import {
   findCachedScenesByFilename,
+  listCommentMigrationSources,
   loadScene,
   loadSession,
   makeEmptyState,
+  mergeRowTextComments,
   recentFiles,
   saveSession,
   sessionIdFor,
+  type CommentMigrationSource,
   type RecentFile,
   type SessionState,
 } from '../storage.js';
@@ -49,6 +52,8 @@ export class AppShell extends LitElement {
   @state() private session: SessionState | null = null;
   @state() private sessionId: string | null = null;
   @state() private recentFilesList: RecentFile[] = [];
+  @state() private commentMigrationSources: CommentMigrationSource[] = [];
+  @state() private migrationNotice: string | null = null;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -59,6 +64,10 @@ export class AppShell extends LitElement {
     this.addEventListener('title-changed', this.onTitleChanged as EventListener);
     this.addEventListener('sheet-notes-changed', this.onSheetNotesChanged as EventListener);
     this.addEventListener('request-new-file', this.onRequestNewFile);
+    this.addEventListener(
+      'request-comment-migration',
+      this.onRequestCommentMigration,
+    );
     this.addEventListener('export-json', this.onExportJson);
     this.addEventListener('print', this.onPrint);
     this.addEventListener('row-text-change', this.onRowTextChange as EventListener);
@@ -89,6 +98,10 @@ export class AppShell extends LitElement {
       this.onSheetNotesChanged as EventListener,
     );
     this.removeEventListener('request-new-file', this.onRequestNewFile);
+    this.removeEventListener(
+      'request-comment-migration',
+      this.onRequestCommentMigration,
+    );
     this.removeEventListener('export-json', this.onExportJson);
     this.removeEventListener('print', this.onPrint);
     this.removeEventListener('row-text-change', this.onRowTextChange as EventListener);
@@ -126,6 +139,16 @@ export class AppShell extends LitElement {
             .filename=${this.session.filename}
             .title=${this.session.title}
           ></x32-toolbar>
+          ${this.migrationNotice
+            ? html`
+                <div class="shell-notice">
+                  <span>${this.migrationNotice}</span>
+                  <button type="button" @click=${this.dismissMigrationNotice}>
+                    Dismiss
+                  </button>
+                </div>
+              `
+            : nothing}
         </header>
         <main class="shell-main">
           <x32-patch-list
@@ -139,6 +162,9 @@ export class AppShell extends LitElement {
             .collapsedGaps=${this.session.collapsedGaps}
           ></x32-patch-list>
         </main>
+        ${this.commentMigrationSources.length > 0
+          ? this.renderCommentMigrationPicker()
+          : nothing}
       </div>
       ${nothing}
     `;
@@ -184,6 +210,21 @@ export class AppShell extends LitElement {
 
   private onRequestNewFile = () => {
     this.resetActiveSession();
+  };
+
+  private onRequestCommentMigration = () => {
+    if (!this.session) return;
+    const sources = listCommentMigrationSources(
+      this.sessionId,
+      this.session.filename,
+    );
+    if (sources.length === 0) {
+      this.migrationNotice =
+        'No saved source or remarks comments were found in other files.';
+      return;
+    }
+    this.commentMigrationSources = sources;
+    this.migrationNotice = null;
   };
 
   private onExportJson = () => {
@@ -303,6 +344,8 @@ export class AppShell extends LitElement {
     this.parser = parser;
     this.sessionId = scene.sessionId;
     this.session = loadSession(scene.sessionId) ?? makeEmptyState(scene.filename);
+    this.commentMigrationSources = [];
+    this.migrationNotice = null;
     this.persist({ filename: scene.filename, size: scene.size, text: scene.text });
     if (syncUrl) {
       this.syncUrl(scene.sessionId);
@@ -316,6 +359,8 @@ export class AppShell extends LitElement {
     this.session = null;
     this.sessionId = null;
     this.recentFilesList = recentFiles();
+    this.commentMigrationSources = [];
+    this.migrationNotice = null;
     if (syncUrl) {
       this.syncUrl(null);
     }
@@ -363,6 +408,116 @@ export class AppShell extends LitElement {
       ].join('\n\n'),
     );
   }
+
+  private dismissMigrationNotice = () => {
+    this.migrationNotice = null;
+  };
+
+  private closeCommentMigrationPicker = () => {
+    this.commentMigrationSources = [];
+  };
+
+  private applyCommentMigration = (sourceSessionId: string) => {
+    if (!this.session) return;
+
+    const sourceSession = loadSession(sourceSessionId);
+    if (!sourceSession) {
+      this.commentMigrationSources = [];
+      this.migrationNotice = 'That saved file could not be opened anymore.';
+      return;
+    }
+
+    const merged = mergeRowTextComments(
+      this.session.rowText,
+      sourceSession.rowText,
+    );
+    this.commentMigrationSources = [];
+
+    if (merged.importedFields === 0) {
+      this.migrationNotice = [
+        `No empty comment cells were available to fill from "${sourceSession.filename}".`,
+        'Existing comments in the current file were left untouched.',
+      ].join(' ');
+      return;
+    }
+
+    this.mutateSession((s) => {
+      s.rowText = merged.rowText;
+    });
+    this.migrationNotice = [
+      `Imported ${formatCount(merged.importedFields, 'comment')} across`,
+      `${formatCount(merged.importedRows, 'row')} from "${sourceSession.filename}".`,
+      'Existing comments in the current file were kept.',
+    ].join(' ');
+  };
+
+  private renderCommentMigrationPicker() {
+    return html`
+      <div
+        class="shell-modal-backdrop"
+        @click=${this.closeCommentMigrationPicker}
+      >
+        <section
+          class="shell-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="comment-migration-title"
+          @click=${(e: Event) => e.stopPropagation()}
+        >
+          <div class="shell-modal-header">
+            <div>
+              <h2 id="comment-migration-title">Migrate comments</h2>
+              <p>
+                Import saved <strong>Source</strong> and <strong>Remarks</strong>
+                text from another file. Only empty cells in the current file will
+                be filled.
+              </p>
+            </div>
+            <button
+              type="button"
+              class="shell-modal-close"
+              aria-label="Close"
+              @click=${this.closeCommentMigrationPicker}
+            >
+              Close
+            </button>
+          </div>
+
+          <div class="comment-migration-list">
+            ${this.commentMigrationSources.map((source) => {
+              const isSameFilename = source.filename === this.session?.filename;
+              return html`
+                <button
+                  type="button"
+                  class="comment-migration-item"
+                  @click=${() => this.applyCommentMigration(source.sessionId)}
+                >
+                  <span class="comment-migration-name">${source.filename}</span>
+                  <span class="comment-migration-meta">
+                    ${formatCount(source.commentRowCount, 'commented row')}
+                    · ${isSameFilename ? 'same filename' : 'other file'}
+                    · ${this.formatUpdatedAt(source.updatedAt)}
+                  </span>
+                </button>
+              `;
+            })}
+          </div>
+        </section>
+      </div>
+    `;
+  }
+
+  private formatUpdatedAt(timestamp: number): string {
+    if (!timestamp) return 'saved earlier';
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(timestamp);
+  }
+}
+
+function formatCount(value: number, noun: string): string {
+  return `${value} ${noun}${value === 1 ? '' : 's'}`;
 }
 
 declare global {

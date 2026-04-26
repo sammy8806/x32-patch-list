@@ -14,6 +14,9 @@ it as a PWA once you've loaded it over HTTPS.
 3. The patch list renders client-side. Everything stays local to your browser.
 4. Fill in source and remarks columns, toggle rows off that shouldn't print,
    set a title, and hit **Print**.
+5. When a new scene is the successor to an older one, use **Migrate Comments**
+   to pull saved Source/Remarks text forward from another file without
+   overwriting comments already entered in the current file.
 
 Title, remarks, row toggles, and section toggles are saved in `localStorage`
 keyed by the scene filename + contents, so reloading or coming back later

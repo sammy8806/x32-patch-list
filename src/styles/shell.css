@@ -20,6 +20,7 @@
   gap: var(--gap);
   align-items: center;
   padding: 0.5rem 1rem;
+  flex-wrap: wrap;
 }
 
 .shell-toolbar .filename {
@@ -51,6 +52,93 @@
 
 .shell-main {
   padding: 1rem;
+}
+
+.shell-notice {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.55rem 1rem 0.7rem;
+  border-top: 1px solid var(--border);
+  background: var(--surface-alt);
+  font-size: 0.85rem;
+}
+
+.shell-notice button {
+  flex: none;
+}
+
+.shell-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.38);
+}
+
+.shell-modal {
+  width: min(42rem, 100%);
+  max-height: min(36rem, calc(100vh - 2rem));
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 2px);
+  background: var(--surface);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.24);
+}
+
+.shell-modal-header {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.shell-modal-header h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1.1rem;
+}
+
+.shell-modal-header p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.shell-modal-close {
+  white-space: nowrap;
+}
+
+.comment-migration-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  overflow: auto;
+}
+
+.comment-migration-item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  align-items: flex-start;
+  padding: 0.8rem 0.9rem;
+  text-align: left;
+}
+
+.comment-migration-name {
+  font-weight: 600;
+}
+
+.comment-migration-meta {
+  color: var(--muted);
+  font-size: 0.82rem;
 }
 
 /* Start screen is full-bleed — drop main padding only when it's present. */
@@ -243,4 +331,36 @@
   background: var(--start-muted-bg);
   border: 1px solid var(--start-border);
   border-radius: 4px;
+}
+
+@media (max-width: 720px) {
+  .shell-toolbar {
+    align-items: stretch;
+  }
+
+  .shell-toolbar .filename {
+    max-width: none;
+    width: 100%;
+  }
+
+  .shell-toolbar input[name="title"] {
+    width: 100%;
+  }
+
+  .shell-modal {
+    padding: 0.9rem;
+  }
+
+  .shell-modal-header {
+    flex-direction: column;
+  }
+
+  .shell-modal-close {
+    width: 100%;
+  }
+
+  .shell-notice {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }

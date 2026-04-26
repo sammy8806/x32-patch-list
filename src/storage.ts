@@ -106,6 +106,13 @@ export interface CachedSceneMatch {
   updatedAt: number;
 }
 
+export interface CommentMigrationSource {
+  sessionId: string;
+  filename: string;
+  updatedAt: number;
+  commentRowCount: number;
+}
+
 export function findCachedScenesByFilename(filename: string): CachedSceneMatch[] {
   const root = read();
   return Object.entries(root.sessions)
@@ -122,6 +129,76 @@ export function findCachedScenesByFilename(filename: string): CachedSceneMatch[]
         : [],
     )
     .sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+export function listCommentMigrationSources(
+  currentSessionId?: string | null,
+  currentFilename?: string | null,
+): CommentMigrationSource[] {
+  const root = read();
+  return Object.entries(root.sessions)
+    .flatMap(([sessionId, entry]) => {
+      if (sessionId === currentSessionId) return [];
+      const commentRowCount = countCommentRows(entry.state.rowText);
+      if (commentRowCount === 0) return [];
+      return [
+        {
+          sessionId,
+          filename: entry.state.filename,
+          updatedAt: entry.updatedAt,
+          commentRowCount,
+        },
+      ];
+    })
+    .sort((a, b) => {
+      const similarityDelta =
+        filenameSimilarity(b.filename, currentFilename) -
+        filenameSimilarity(a.filename, currentFilename);
+      if (similarityDelta !== 0) return similarityDelta;
+      return b.updatedAt - a.updatedAt;
+    });
+}
+
+export function mergeRowTextComments(
+  current: SessionState['rowText'],
+  incoming: SessionState['rowText'],
+): {
+  rowText: SessionState['rowText'];
+  importedRows: number;
+  importedFields: number;
+} {
+  const next = { ...current };
+  let importedRows = 0;
+  let importedFields = 0;
+
+  for (const [rowKey, incomingValue] of Object.entries(incoming)) {
+    if (!isRecord(incomingValue)) continue;
+
+    const currentValue = next[rowKey] ?? {};
+    let rowChanged = false;
+    let mergedValue = currentValue;
+
+    for (const field of ['source', 'remarks'] as const) {
+      const candidate = incomingValue[field];
+      if (!hasCommentText(candidate) || hasCommentText(currentValue[field])) {
+        continue;
+      }
+
+      if (mergedValue === currentValue) {
+        mergedValue = { ...currentValue };
+      }
+      mergedValue[field] = candidate;
+      importedFields += 1;
+      rowChanged = true;
+    }
+
+    if (rowChanged) {
+      next[rowKey] = mergedValue;
+      importedRows += 1;
+    }
+  }
+
+  return { rowText: next, importedRows, importedFields };
 }
 
 export function saveSession(
@@ -258,6 +335,47 @@ function isStoredSession(value: unknown): value is StoredSession {
 
 function isRecord(value: unknown): value is Record<string, any> {
   return typeof value === 'object' && value !== null;
+}
+
+function countCommentRows(rowText: SessionState['rowText']): number {
+  return Object.values(rowText).filter(
+    (value) =>
+      isRecord(value) &&
+      (hasCommentText(value.source) || hasCommentText(value.remarks)),
+  ).length;
+}
+
+function hasCommentText(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+function filenameSimilarity(
+  filename: string,
+  reference?: string | null,
+): number {
+  if (!reference) return 0;
+
+  const left = tokenizeFilename(filename);
+  const right = tokenizeFilename(reference);
+  if (left.size === 0 || right.size === 0) return 0;
+
+  let overlap = 0;
+  for (const token of left) {
+    if (right.has(token)) overlap += 1;
+  }
+
+  const unionSize = new Set([...left, ...right]).size;
+  return unionSize === 0 ? 0 : overlap / unionSize;
+}
+
+function tokenizeFilename(filename: string): Set<string> {
+  return new Set(
+    filename
+      .replace(/\.[^.]+$/, '')
+      .toLowerCase()
+      .split(/[^a-z0-9]+/g)
+      .filter((token) => token.length > 0),
+  );
 }
 
 function hashText(value: string): string {
