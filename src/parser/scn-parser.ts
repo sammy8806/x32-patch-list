@@ -256,6 +256,58 @@ export class ScnParser {
 
   // ---------------- Query API ----------------
 
+  private getChannelsForInputSource(source: string): Channel[] {
+    const routedKeys = this.inputRouteSource[source];
+    if (!routedKeys) return [];
+
+    const routedChannels: Channel[] = [];
+    for (const routeKey of routedKeys) {
+      const channels = this.channelByRoute[routeKey];
+      if (channels) routedChannels.push(...channels);
+    }
+    return routedChannels;
+  }
+
+  private getOutputSourceFallback(source: string): Channel | null {
+    const match = source.match(/^([a-z0-9]+)\.([0-9]{2})$/);
+    if (!match) return null;
+
+    const [, type, indexStr] = match;
+    const index = parseInt(indexStr, 10);
+
+    switch (type) {
+      case 'in':
+        if (index <= 32) return { name: `Local ${pad2(index)}`, color: 'OFF' };
+        if (index <= 38) return { name: `Aux In ${pad2(index - 32)}`, color: 'OFF' };
+        if (index === 39) return { name: 'USB L', color: 'OFF' };
+        if (index === 40) return { name: 'USB R', color: 'OFF' };
+        return null;
+      case 'aes50a':
+        return { name: `AES50-A ${indexStr}`, color: 'OFF' };
+      case 'aes50b':
+        return { name: `AES50-B ${indexStr}`, color: 'OFF' };
+      case 'card':
+        return { name: `Card ${indexStr}`, color: 'OFF' };
+      case 'auxin':
+        return { name: `Aux ${index}`, color: 'OFF' };
+      default:
+        return null;
+    }
+  }
+
+  private resolveOutputSource(source: string | null | undefined): Channel | null {
+    if (!source) return null;
+
+    // If the source points back at another output, chain through.
+    const linkedSource = source in this.outputs ? this.outputs[source] : source;
+    if (!linkedSource) return null;
+
+    const routedInputChannel = this.getChannelsForInputSource(linkedSource)[0];
+    if (routedInputChannel) return routedInputChannel;
+
+    return this.channels[linkedSource] ?? this.getOutputSourceFallback(linkedSource);
+  }
+
   /** Return the route entry for a route key, or `undefined`. */
   getRoute(routeKey: string): RouteEntry | undefined {
     return this.route[routeKey];
@@ -303,12 +355,7 @@ export class ScnParser {
         continue;
       }
 
-      // If the source points back at another output, chain through.
-      if (source && source in this.outputs) {
-        source = this.outputs[source];
-      }
-
-      patch.push(source ? this.channels[source] ?? null : null);
+      patch.push(this.resolveOutputSource(source));
     }
     return patch;
   }
@@ -330,11 +377,7 @@ export class ScnParser {
         continue;
       }
 
-      const routedChannels: Channel[] = [];
-      for (const routeKey of routedKeys) {
-        const chans = this.channelByRoute[routeKey];
-        if (chans) routedChannels.push(...chans);
-      }
+      const routedChannels = this.getChannelsForInputSource(key);
       patch.push(routedChannels.length > 0 ? routedChannels : null);
     }
     return patch;

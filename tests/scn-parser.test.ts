@@ -84,4 +84,32 @@ describe('ScnParser routing', () => {
     expect(parser.getInputUserRoutePosition('card.01')).toBe('user-in.01');
     expect(parser.getInputUserRoutePosition('card.25')).toBeNull();
   });
+
+  test('output local sources resolve through active input routing', () => {
+    const parser = parseScene(`
+      /config/userrout/out/01 1
+      /config/routing/CARD/1-8 UOUT1-8
+      /config/routing/IN/1-8 AN1-8
+      /ch/20/config Guitar 0 RD 1
+    `);
+
+    const row = parser.getOutputListForType('card')[0];
+    if (!row || 'p16' in row) throw new Error('expected channel');
+
+    expect(row.name).toBe('Guitar');
+    expect(row.channel_index).toBe(20);
+  });
+
+  test('output local sources use source labels when no channel is assigned', () => {
+    const parser = parseScene(`
+      /config/userrout/out/01 1
+      /config/routing/CARD/1-8 UOUT1-8
+    `);
+
+    const row = parser.getOutputListForType('card')[0];
+    if (!row || 'p16' in row) throw new Error('expected source fallback');
+
+    expect(row.name).toBe('Local 01');
+    expect(row.color).toBe('OFF');
+  });
 });
