@@ -11,6 +11,9 @@ export interface Channel {
   name?: string;
   color?: string;
 
+  /** Physical source label to show on output patch rows, when distinct. */
+  output_source_label?: string;
+
   /** For input strips: the logical route slot this channel reads from. */
   route_key?: string;
 

@@ -86,18 +86,20 @@ describe('ScnParser routing', () => {
   });
 
   test('output local sources resolve through active input routing', () => {
+    const userOut = ['1', ...Array(46).fill('0'), '3'].join(' ');
     const parser = parseScene(`
-      /config/userrout/out/01 1
-      /config/routing/CARD/1-8 UOUT1-8
+      /config/userrout/out/01 ${userOut}
+      /config/routing/CARD/1-8 OFF OFF OFF UOUT41-48
       /config/routing/IN/1-8 AN1-8
-      /ch/20/config Guitar 0 RD 1
+      /ch/32/config MessIN 0 RD 3
     `);
 
-    const row = parser.getOutputListForType('card')[0];
+    const row = parser.getOutputListForType('card')[31];
     if (!row || 'p16' in row) throw new Error('expected channel');
 
-    expect(row.name).toBe('Guitar');
-    expect(row.channel_index).toBe(20);
+    expect(row.name).toBe('MessIN');
+    expect(row.channel_index).toBe(32);
+    expect(row.output_source_label).toBe('Local 03');
   });
 
   test('output local sources use source labels when no channel is assigned', () => {
@@ -111,5 +113,6 @@ describe('ScnParser routing', () => {
 
     expect(row.name).toBe('Local 01');
     expect(row.color).toBe('OFF');
+    expect(row.output_source_label).toBe('Local 01');
   });
 });

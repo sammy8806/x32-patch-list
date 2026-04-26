@@ -360,7 +360,7 @@ export class PatchTable extends LitElement {
     return html`
       <tr class=${classMap({ [parity]: true, ignore: !visible, ...extraClasses })}>
         <td>${lineIndex + 1}</td>
-        <td>${getDeskName(channel)}</td>
+        <td>${channel?.output_source_label ?? getDeskName(channel)}</td>
         ${renderUserRouteCell(userRouteKey)}
         <td class=${`colour col-${channel?.color ?? 'OFF'}`}></td>
         <td>${channel?.name ?? ''}</td>

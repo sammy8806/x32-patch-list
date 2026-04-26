@@ -31,7 +31,7 @@ textarea {
 }
 
 table.patch {
-  width: 50%;
+  min-width: 70%;
   border-collapse: collapse;
   font-family: monospace;
   margin-bottom: 2em;
@@ -78,7 +78,7 @@ table.patch th:last-child {
 /* In/Out; Line */
 table.patch td:nth-child(1),
 table.patch th:nth-child(1) {
-  width: 1.8em;
+  width: 4.3em;
   text-align: right;
   padding-right: 0.4em;
 }
@@ -86,7 +86,7 @@ table.patch th:nth-child(1) {
 /* Line */
 table.patch td:nth-child(2),
 table.patch th:nth-child(2) {
-  width: 4.8em;
+  width: 9.5em;
   text-align: right;
   padding-right: 0.4em;
 }
@@ -101,14 +101,14 @@ table.patch th:nth-child(3) {
 
 /* Name */
 table.patch td:nth-child(5) {
-  width: 10em;
+  width: 12em;
   padding-left: 0.4em;
 }
 
 /* Source and Remarks */
 table.patch td:nth-child(6),
 table.patch td:nth-child(7) {
-  width: 25em;
+  width: 20em;
 }
 
 /* Channel Colours — X32 strip colour codes. */

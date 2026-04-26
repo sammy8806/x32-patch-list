@@ -268,7 +268,7 @@ export class ScnParser {
     return routedChannels;
   }
 
-  private getOutputSourceFallback(source: string): Channel | null {
+  private getOutputSourceLabel(source: string): string | null {
     const match = source.match(/^([a-z0-9]+)\.([0-9]{2})$/);
     if (!match) return null;
 
@@ -277,19 +277,19 @@ export class ScnParser {
 
     switch (type) {
       case 'in':
-        if (index <= 32) return { name: `Local ${pad2(index)}`, color: 'OFF' };
-        if (index <= 38) return { name: `Aux In ${pad2(index - 32)}`, color: 'OFF' };
-        if (index === 39) return { name: 'USB L', color: 'OFF' };
-        if (index === 40) return { name: 'USB R', color: 'OFF' };
+        if (index <= 32) return `Local ${pad2(index)}`;
+        if (index <= 38) return `Aux In ${pad2(index - 32)}`;
+        if (index === 39) return 'USB L';
+        if (index === 40) return 'USB R';
         return null;
       case 'aes50a':
-        return { name: `AES50-A ${indexStr}`, color: 'OFF' };
+        return `AES50-A ${indexStr}`;
       case 'aes50b':
-        return { name: `AES50-B ${indexStr}`, color: 'OFF' };
+        return `AES50-B ${indexStr}`;
       case 'card':
-        return { name: `Card ${indexStr}`, color: 'OFF' };
+        return `Card ${indexStr}`;
       case 'auxin':
-        return { name: `Aux ${index}`, color: 'OFF' };
+        return `Aux ${index}`;
       default:
         return null;
     }
@@ -302,10 +302,25 @@ export class ScnParser {
     const linkedSource = source in this.outputs ? this.outputs[source] : source;
     if (!linkedSource) return null;
 
+    const sourceLabel = this.getOutputSourceLabel(linkedSource);
     const routedInputChannel = this.getChannelsForInputSource(linkedSource)[0];
-    if (routedInputChannel) return routedInputChannel;
+    if (routedInputChannel) {
+      return {
+        ...routedInputChannel,
+        output_source_label: sourceLabel ?? undefined,
+      };
+    }
 
-    return this.channels[linkedSource] ?? this.getOutputSourceFallback(linkedSource);
+    const directChannel = this.channels[linkedSource];
+    if (directChannel) {
+      return sourceLabel
+        ? { ...directChannel, output_source_label: sourceLabel }
+        : directChannel;
+    }
+
+    return sourceLabel
+      ? { name: sourceLabel, color: 'OFF', output_source_label: sourceLabel }
+      : null;
   }
 
   /** Return the route entry for a route key, or `undefined`. */
