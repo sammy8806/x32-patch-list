@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>V7 · Routing Matrix — X32 Patch List</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #0e1116;
+        --panel: #131820;
+        --grid: #1c222d;
+        --grid-strong: #2a3140;
+        --text: #e7eaf0;
+        --muted: #7d8597;
+        --label: #b3bac6;
+        --hover: #f59e0b;
+        --c-red: #ef4444;
+        --c-yellow: #eab308;
+        --c-green: #22c55e;
+        --c-cyan: #06b6d4;
+        --c-blue: #3b82f6;
+        --c-magenta: #d946ef;
+        --c-white: #e5e7eb;
+        --c-off: #475569;
+        --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+        --font-mono: "Geist Mono", ui-monospace, monospace;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0; padding: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font-sans);
+        -webkit-font-smoothing: antialiased;
+        min-height: 100vh;
+      }
+      body {
+        padding: 1.5rem 1.5rem 3rem;
+      }
+      header.bar {
+        max-width: 1280px; margin: 0 auto 1.25rem;
+        display: flex; align-items: center; gap: 1rem;
+      }
+      h1 { margin: 0; font-size: 1rem; font-weight: 600; letter-spacing: 0.02em; }
+      h1 .v { color: var(--muted); font-weight: 500; margin-right: 0.5rem; font-family: var(--font-mono); font-size: 0.85rem; }
+      .crumbs { font-family: var(--font-mono); font-size: 0.74rem; color: var(--muted); }
+      .crumbs strong { color: var(--label); font-weight: 500; }
+      .right { margin-left: auto; display: flex; gap: 0.4rem; }
+      .pill {
+        font-family: var(--font-mono); font-size: 0.7rem;
+        padding: 4px 10px; border: 1px solid var(--grid-strong);
+        border-radius: 999px; background: var(--panel);
+        color: var(--label);
+        display: inline-flex; align-items: center; gap: 0.35rem;
+      }
+      .pill .k { color: var(--muted); }
+      .pill.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+      .pill.amber { color: var(--hover); border-color: rgba(245,158,11,0.4); background: rgba(245,158,11,0.08); }
+
+      .matrix-wrap {
+        max-width: 1280px; margin: 0 auto;
+        background: var(--panel);
+        border: 1px solid var(--grid-strong);
+        border-radius: 10px;
+        padding: 1.25rem 1.25rem 1rem;
+        box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 30px 60px -30px rgba(0,0,0,0.6);
+      }
+      .matrix-wrap + .matrix-wrap { margin-top: 1.25rem; }
+
+      .matrix-head {
+        display: flex; justify-content: space-between; align-items: baseline;
+        margin-bottom: 0.85rem;
+      }
+      .matrix-head h2 {
+        margin: 0; font-size: 0.78rem;
+        font-family: var(--font-mono);
+        text-transform: uppercase; letter-spacing: 0.18em;
+        font-weight: 600; color: var(--label);
+        display: flex; align-items: center; gap: 0.5rem;
+      }
+      .matrix-head h2::before {
+        content: ''; width: 8px; height: 8px; border-radius: 2px;
+        background: var(--accent, var(--label));
+        box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent, var(--label)) 25%, transparent);
+      }
+      .matrix-head .stat {
+        font-family: var(--font-mono); font-size: 0.7rem;
+        color: var(--muted);
+      }
+      .matrix-head .stat strong { color: var(--text); font-weight: 500; }
+
+      .matrix {
+        display: grid;
+        font-family: var(--font-mono);
+        font-size: 0.7rem;
+      }
+      .corner {
+        background: var(--panel);
+        border-right: 1px solid var(--grid-strong);
+        border-bottom: 1px solid var(--grid-strong);
+      }
+      .col-head {
+        height: 110px;
+        position: relative;
+        border-bottom: 1px solid var(--grid-strong);
+        border-right: 1px solid var(--grid);
+      }
+      .col-head .label {
+        position: absolute;
+        bottom: 8px; left: 50%;
+        transform-origin: left bottom;
+        transform: rotate(-60deg) translateX(0);
+        white-space: nowrap;
+        color: var(--label);
+        font-size: 0.7rem;
+      }
+      .col-head .label .meta {
+        color: var(--muted); margin-left: 4px; font-size: 0.65rem;
+      }
+      .col-head.group-start { border-left: 1px solid var(--grid-strong); }
+      .col-head.hover-x {
+        background: linear-gradient(180deg, rgba(245,158,11,0.18), rgba(245,158,11,0));
+      }
+      .col-head.hover-x .label { color: var(--hover); }
+
+      .row-head {
+        display: grid;
+        grid-template-columns: 56px 1fr;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 10px 4px 12px;
+        border-right: 1px solid var(--grid-strong);
+        border-bottom: 1px solid var(--grid);
+        height: 28px;
+      }
+      .row-head .id { color: var(--label); }
+      .row-head .name {
+        color: var(--text);
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        font-family: var(--font-sans); font-size: 0.78rem;
+      }
+      .row-head.group-start { border-top: 1px solid var(--grid-strong); }
+      .row-head.hover-y {
+        background: linear-gradient(90deg, rgba(245,158,11,0.18), rgba(245,158,11,0));
+      }
+      .row-head.hover-y .name, .row-head.hover-y .id { color: var(--hover); }
+
+      .cell {
+        height: 28px;
+        border-right: 1px solid var(--grid);
+        border-bottom: 1px solid var(--grid);
+        display: grid; place-items: center;
+        position: relative;
+      }
+      .cell.group-start { border-left: 1px solid var(--grid-strong); }
+      .cell.hover-x { background: rgba(245,158,11,0.05); }
+      .cell.hover-y { background: rgba(245,158,11,0.05); }
+      .cell.hover-x.hover-y { background: rgba(245,158,11,0.16); }
+      .cell .dot {
+        width: 8px; height: 8px; border-radius: 50%;
+        background: var(--c-off);
+        opacity: 0.18;
+      }
+      .cell.routed .dot {
+        background: var(--accent);
+        opacity: 1;
+        box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 30%, transparent),
+                    0 0 8px color-mix(in oklab, var(--accent) 60%, transparent);
+      }
+      .cell.routed.crosshair .dot {
+        width: 12px; height: 12px;
+        outline: 2px solid var(--hover);
+        outline-offset: 2px;
+        border-radius: 50%;
+      }
+
+      .group-band {
+        grid-row: 1;
+        height: 22px;
+        font-family: var(--font-mono);
+        font-size: 0.6rem;
+        color: var(--muted);
+        text-transform: uppercase; letter-spacing: 0.14em;
+        border-right: 1px solid var(--grid-strong);
+        border-bottom: 1px solid var(--grid);
+        display: flex; align-items: center; padding: 0 8px;
+        background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+      }
+      .group-band.row { padding-left: 12px; }
+
+      .footer-row {
+        max-width: 1280px; margin: 1rem auto 0;
+        font-family: var(--font-mono); font-size: 0.7rem; color: var(--muted);
+        display: flex; gap: 1.25rem; flex-wrap: wrap; align-items: center;
+      }
+      .footer-row .swatch {
+        display: inline-flex; align-items: center; gap: 0.4rem;
+      }
+      .footer-row .swatch .dot {
+        width: 8px; height: 8px; border-radius: 50%;
+        box-shadow: 0 0 0 2px color-mix(in oklab, currentColor 30%, transparent);
+      }
+      .callout {
+        display: inline-flex; align-items: center; gap: 0.5rem;
+        padding: 6px 10px; border-radius: 999px;
+        background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3);
+        color: var(--hover);
+        font-family: var(--font-mono); font-size: 0.72rem;
+      }
+      .callout::before {
+        content: ''; width: 6px; height: 6px; border-radius: 50%;
+        background: var(--hover); box-shadow: 0 0 6px var(--hover);
+      }
+    </style>
+  </head>
+  <body>
+    <header class="bar">
+      <h1><span class="v">V7</span> Routing · Crosspoint Matrix</h1>
+      <span class="crumbs"><strong>festival-mainstage.scn</strong> · 24 routes</span>
+      <div class="right">
+        <span class="pill active">Matrix</span>
+        <span class="pill">Patchbay</span>
+        <span class="pill">Node graph</span>
+        <span class="pill amber">A 09 → Ch 06</span>
+      </div>
+    </header>
+
+    <section class="matrix-wrap">
+      <div class="matrix-head">
+        <h2 style="--accent: var(--c-cyan)">Input Routing · Sources → Channels</h2>
+        <span class="stat"><strong>10</strong> sources × <strong>10</strong> channels · <strong>10</strong> assigned</span>
+      </div>
+      <div class="matrix" id="m1"></div>
+    </section>
+
+    <section class="matrix-wrap">
+      <div class="matrix-head">
+        <h2 style="--accent: var(--c-magenta)">Output Routing · Channels &amp; Buses → Physical Outputs</h2>
+        <span class="stat"><strong>13</strong> sources × <strong>8</strong> outputs · <strong>14</strong> assigned</span>
+      </div>
+      <div class="matrix" id="m2"></div>
+    </section>
+
+    <div class="footer-row">
+      <span class="callout">Hovered: AES50-A 09 (Gtr L) → Ch 06 (Gtr L)</span>
+      <span class="swatch" style="color: var(--c-red)"><span class="dot" style="background: var(--c-red)"></span> Vocals</span>
+      <span class="swatch" style="color: var(--c-yellow)"><span class="dot" style="background: var(--c-yellow)"></span> Drums</span>
+      <span class="swatch" style="color: var(--c-cyan)"><span class="dot" style="background: var(--c-cyan)"></span> Bass</span>
+      <span class="swatch" style="color: var(--c-green)"><span class="dot" style="background: var(--c-green)"></span> Guitar</span>
+      <span class="swatch" style="color: var(--c-magenta)"><span class="dot" style="background: var(--c-magenta)"></span> Keys</span>
+      <span class="swatch" style="color: var(--c-white)"><span class="dot" style="background: var(--c-white)"></span> Mains/Click</span>
+      <span style="margin-left: auto">v7 · matrix arrangement</span>
+    </div>
+
+    <script>
+      // ---------- Matrix 1: Sources → Channels ----------
+      const SOURCES_M1 = [
+        { group: 'Local · AN1-8', items: [
+          { id: 'AN 01', name: 'Lead Vox', color: 'red', key: 'src.local-01' },
+          { id: 'AN 02', name: 'BVox',     color: 'red', key: 'src.local-02' },
+          { id: 'AN 03', name: 'Kick',     color: 'yellow', key: 'src.local-03' },
+          { id: 'AN 04', name: 'Snare T',  color: 'yellow', key: 'src.local-04' },
+        ]},
+        { group: 'AES50-A · stage box', items: [
+          { id: 'A 01',  name: 'Bass DI',  color: 'cyan',    key: 'src.aes50a-01' },
+          { id: 'A 09',  name: 'Gtr L',    color: 'green',   key: 'src.aes50a-09', highlight: true },
+          { id: 'A 10',  name: 'Gtr R',    color: 'green',   key: 'src.aes50a-10' },
+          { id: 'A 17',  name: 'Keys L',   color: 'magenta', key: 'src.aes50a-17' },
+          { id: 'A 18',  name: 'Keys R',   color: 'magenta', key: 'src.aes50a-18' },
+        ]},
+        { group: 'Aux · rear panel', items: [
+          { id: 'AUX 1', name: 'Click',    color: 'white',   key: 'src.auxin-01' },
+        ]},
+      ];
+
+      const DESTS_M1 = [
+        { group: 'Channels Ch 01-32', items: [
+          { id: 'Ch 01', name: 'Lead',  key: 'ch.01.in' },
+          { id: 'Ch 02', name: 'BVox',  key: 'ch.02.in' },
+          { id: 'Ch 03', name: 'Kick',  key: 'ch.03.in' },
+          { id: 'Ch 04', name: 'Snare', key: 'ch.04.in' },
+          { id: 'Ch 05', name: 'Bass',  key: 'ch.05.in' },
+          { id: 'Ch 06', name: 'Gtr L', key: 'ch.06.in', highlight: true },
+          { id: 'Ch 07', name: 'Gtr R', key: 'ch.07.in' },
+          { id: 'Ch 08', name: 'Keys L', key: 'ch.08.in' },
+          { id: 'Ch 09', name: 'Keys R', key: 'ch.09.in' },
+        ]},
+        { group: 'Aux Ins', items: [
+          { id: 'AuxIn 1', name: 'Click', key: 'aux.01.in' },
+        ]},
+      ];
+
+      const ROUTES_M1 = [
+        ['src.local-01', 'ch.01.in', 'red'],
+        ['src.local-02', 'ch.02.in', 'red'],
+        ['src.local-03', 'ch.03.in', 'yellow'],
+        ['src.local-04', 'ch.04.in', 'yellow'],
+        ['src.aes50a-01', 'ch.05.in', 'cyan'],
+        ['src.aes50a-09', 'ch.06.in', 'green'],
+        ['src.aes50a-10', 'ch.07.in', 'green'],
+        ['src.aes50a-17', 'ch.08.in', 'magenta'],
+        ['src.aes50a-18', 'ch.09.in', 'magenta'],
+        ['src.auxin-01', 'aux.01.in', 'white'],
+      ];
+
+      // ---------- Matrix 2: Channels/Buses → Outputs ----------
+      const SOURCES_M2 = [
+        { group: 'Channels Ch 01-32', items: [
+          { id: 'Ch 01', name: 'Lead Vox', color: 'red', key: 'ch.01.out' },
+          { id: 'Ch 02', name: 'BVox',     color: 'red', key: 'ch.02.out' },
+          { id: 'Ch 03', name: 'Kick',     color: 'yellow', key: 'ch.03.out' },
+          { id: 'Ch 04', name: 'Snare T',  color: 'yellow', key: 'ch.04.out' },
+          { id: 'Ch 05', name: 'Bass',     color: 'cyan', key: 'ch.05.out' },
+          { id: 'Ch 06', name: 'Gtr L',    color: 'green', key: 'ch.06.out' },
+          { id: 'Ch 07', name: 'Gtr R',    color: 'green', key: 'ch.07.out' },
+          { id: 'Ch 08', name: 'Keys L',   color: 'magenta', key: 'ch.08.out' },
+          { id: 'Ch 09', name: 'Keys R',   color: 'magenta', key: 'ch.09.out' },
+        ]},
+        { group: 'Buses', items: [
+          { id: 'Bus 1', name: 'IEM Vox',   color: 'red',    key: 'bus.iem-vox.out' },
+          { id: 'Bus 2', name: 'IEM Drums', color: 'yellow', key: 'bus.iem-drum.out' },
+          { id: 'M L+R', name: 'Mains L+R', color: 'white',  key: 'bus.main.out' },
+          { id: 'Aux 1', name: 'Click',     color: 'white',  key: 'aux.01.out' },
+        ]},
+      ];
+
+      const DESTS_M2 = [
+        { group: 'Local · XLR Out 1-8', items: [
+          { id: 'XLR 01', name: 'Mains L', key: 'out.xlr-01' },
+          { id: 'XLR 02', name: 'Mains R', key: 'out.xlr-02' },
+          { id: 'XLR 07', name: 'IEM Vox', key: 'out.xlr-07' },
+          { id: 'XLR 08', name: 'IEM Drums', key: 'out.xlr-08' },
+        ]},
+        { group: 'P-16', items: [
+          { id: 'P16 01', name: 'Lead Vox', key: 'out.p16-01' },
+          { id: 'P16 03', name: 'Kick',     key: 'out.p16-03' },
+          { id: 'P16 05', name: 'Bass',     key: 'out.p16-05' },
+        ]},
+        { group: 'AES50-B', items: [
+          { id: 'B 01', name: 'Multitrack 1', key: 'out.aes50b-01' },
+        ]},
+      ];
+
+      const ROUTES_M2 = [
+        ['ch.01.out', 'out.xlr-01', 'white'],
+        ['ch.01.out', 'out.xlr-02', 'white'],
+        ['ch.01.out', 'out.xlr-07', 'red'],
+        ['ch.01.out', 'out.p16-01', 'red'],
+        ['ch.01.out', 'out.aes50b-01', 'red'],
+        ['ch.02.out', 'out.xlr-07', 'red'],
+        ['ch.03.out', 'out.xlr-08', 'yellow'],
+        ['ch.03.out', 'out.p16-03', 'yellow'],
+        ['ch.04.out', 'out.xlr-08', 'yellow'],
+        ['ch.05.out', 'out.xlr-01', 'cyan'],
+        ['ch.05.out', 'out.xlr-02', 'cyan'],
+        ['ch.05.out', 'out.p16-05', 'cyan'],
+        ['ch.06.out', 'out.xlr-01', 'green'],
+        ['ch.07.out', 'out.xlr-02', 'green'],
+      ];
+
+      function flatItems(groups) {
+        const out = [];
+        for (const g of groups) {
+          let first = true;
+          for (const it of g.items) {
+            out.push({ ...it, groupName: g.group, groupStart: first });
+            first = false;
+          }
+        }
+        return out;
+      }
+
+      function buildMatrix(targetId, sourceGroups, destGroups, routes, hoverColor) {
+        const sources = flatItems(sourceGroups);
+        const dests = flatItems(destGroups);
+        const target = document.getElementById(targetId);
+
+        const cols = `220px ${dests.map(() => '38px').join(' ')}`;
+        target.style.gridTemplateColumns = cols;
+
+        const routedKeys = new Set(routes.map(([s, d]) => `${s}::${d}`));
+        const colorBy = new Map(routes.map(([s, d, c]) => [`${s}::${d}`, c]));
+        const hoverRow = sources.findIndex(s => s.highlight);
+        const hoverCol = dests.findIndex(d => d.highlight);
+
+        // ── Row 1: a corner cell + per-column group bands (only at group starts) + col headers
+        // To keep grid simple: row 1 is the "group band" row spanning column header tops.
+        // We'll instead make a single row of column heads with an inline group label tag.
+
+        // Header row (col 0 = corner, col 1+ = vertical labels)
+        const corner = document.createElement('div');
+        corner.className = 'corner';
+        corner.style.gridRow = '1';
+        corner.style.gridColumn = '1';
+        corner.style.borderTopLeftRadius = '6px';
+        target.appendChild(corner);
+
+        dests.forEach((d, i) => {
+          const head = document.createElement('div');
+          head.className = 'col-head';
+          if (d.groupStart) head.classList.add('group-start');
+          if (i === hoverCol) head.classList.add('hover-x');
+          head.style.gridRow = '1';
+          head.style.gridColumn = String(i + 2);
+          const label = document.createElement('div');
+          label.className = 'label';
+          const id = document.createElement('span');
+          id.textContent = d.id;
+          const meta = document.createElement('span');
+          meta.className = 'meta';
+          meta.textContent = ' · ' + d.name;
+          label.appendChild(id);
+          label.appendChild(meta);
+          head.appendChild(label);
+          // group tag at top
+          if (d.groupStart) {
+            const tag = document.createElement('div');
+            tag.style.position = 'absolute';
+            tag.style.top = '4px';
+            tag.style.left = '4px';
+            tag.style.fontSize = '0.6rem';
+            tag.style.color = 'var(--muted)';
+            tag.style.letterSpacing = '0.12em';
+            tag.style.textTransform = 'uppercase';
+            tag.textContent = d.groupName;
+            head.appendChild(tag);
+          }
+          target.appendChild(head);
+        });
+
+        // Body rows
+        sources.forEach((s, ri) => {
+          const r = ri + 2;
+          const rowHead = document.createElement('div');
+          rowHead.className = 'row-head';
+          if (s.groupStart) rowHead.classList.add('group-start');
+          if (ri === hoverRow) rowHead.classList.add('hover-y');
+          rowHead.style.gridRow = String(r);
+          rowHead.style.gridColumn = '1';
+          const idEl = document.createElement('span');
+          idEl.className = 'id';
+          idEl.textContent = s.id;
+          const nameEl = document.createElement('span');
+          nameEl.className = 'name';
+          nameEl.textContent = s.name;
+          rowHead.appendChild(idEl);
+          rowHead.appendChild(nameEl);
+          if (s.groupStart) {
+            const tag = document.createElement('div');
+            tag.style.position = 'absolute';
+            tag.style.top = '-14px';
+            tag.style.left = '12px';
+            tag.style.fontSize = '0.58rem';
+            tag.style.color = 'var(--muted)';
+            tag.style.letterSpacing = '0.12em';
+            tag.style.textTransform = 'uppercase';
+            rowHead.style.position = 'relative';
+            tag.textContent = s.groupName;
+            rowHead.appendChild(tag);
+          }
+          target.appendChild(rowHead);
+
+          dests.forEach((d, ci) => {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            if (d.groupStart) cell.classList.add('group-start');
+            if (ri === hoverRow) cell.classList.add('hover-y');
+            if (ci === hoverCol) cell.classList.add('hover-x');
+            cell.style.gridRow = String(r);
+            cell.style.gridColumn = String(ci + 2);
+
+            const k = `${s.key}::${d.key}`;
+            const dot = document.createElement('span');
+            dot.className = 'dot';
+            if (routedKeys.has(k)) {
+              cell.classList.add('routed');
+              const c = colorBy.get(k) || 'white';
+              cell.style.setProperty('--accent', `var(--c-${c})`);
+              if (ri === hoverRow && ci === hoverCol) cell.classList.add('crosshair');
+            }
+            cell.appendChild(dot);
+            target.appendChild(cell);
+          });
+        });
+      }
+
+      window.addEventListener('load', () => {
+        buildMatrix('m1', SOURCES_M1, DESTS_M1, ROUTES_M1, 'cyan');
+        buildMatrix('m2', SOURCES_M2, DESTS_M2, ROUTES_M2, 'magenta');
+      });
+    </script>
+  </body>
+</html>

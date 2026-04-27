@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>V8 · Routing Constellation — X32 Patch List</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #0a0a0f;
+        --surface: #11121a;
+        --ring: #2a2d3a;
+        --ring-strong: #3a3f52;
+        --text: #ecedf3;
+        --muted: #8087a0;
+        --label: #b9bdcc;
+        --c-red: #f87171;
+        --c-yellow: #fbbf24;
+        --c-green: #4ade80;
+        --c-cyan: #22d3ee;
+        --c-blue: #60a5fa;
+        --c-magenta: #e879f9;
+        --c-white: #f4f4f5;
+        --c-off: #4b5563;
+        --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+        --font-mono: "Geist Mono", ui-monospace, monospace;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0; padding: 0;
+        background:
+          radial-gradient(circle at 30% 20%, #1a1c2a 0, transparent 50%),
+          radial-gradient(circle at 80% 80%, #14161f 0, transparent 50%),
+          var(--bg);
+        color: var(--text);
+        font-family: var(--font-sans);
+        -webkit-font-smoothing: antialiased;
+        min-height: 100vh;
+      }
+      body { padding: 1.5rem; display: flex; flex-direction: column; align-items: center; }
+      header.bar {
+        max-width: 1100px; width: 100%;
+        display: flex; align-items: center; gap: 1rem;
+        margin-bottom: 0.75rem;
+      }
+      h1 { margin: 0; font-size: 1rem; font-weight: 600; letter-spacing: 0.02em; }
+      h1 .v { color: var(--muted); font-weight: 500; margin-right: 0.5rem; font-family: var(--font-mono); font-size: 0.85rem; }
+      .crumbs { font-family: var(--font-mono); font-size: 0.74rem; color: var(--muted); }
+      .crumbs strong { color: var(--label); font-weight: 500; }
+      .right { margin-left: auto; display: flex; gap: 0.4rem; }
+      .pill {
+        font-family: var(--font-mono); font-size: 0.7rem;
+        padding: 4px 10px; border: 1px solid var(--ring);
+        border-radius: 999px; background: var(--surface);
+        color: var(--label);
+      }
+      .pill.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+
+      .stage {
+        position: relative;
+        width: 100%; max-width: 1100px;
+        aspect-ratio: 1 / 1;
+        display: grid; place-items: center;
+      }
+      svg.constellation {
+        width: 100%; height: 100%;
+        display: block;
+      }
+      svg .ring-bg {
+        fill: none;
+        stroke: var(--ring);
+        stroke-width: 1;
+      }
+      svg .group-arc {
+        fill: none;
+        stroke-width: 14;
+        opacity: 0.18;
+        stroke-linecap: round;
+      }
+      svg .group-arc.lit {
+        opacity: 0.32;
+      }
+      svg .group-label {
+        fill: var(--muted);
+        font-family: var(--font-mono);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+      }
+      svg .port {
+        fill: var(--surface);
+        stroke: var(--accent, var(--c-off));
+        stroke-width: 2;
+      }
+      svg .port.lit {
+        fill: var(--accent);
+      }
+      svg .port-tick {
+        stroke: var(--accent, var(--ring-strong));
+        stroke-width: 1.5;
+      }
+      svg .port-label {
+        fill: var(--label);
+        font-family: var(--font-mono);
+        font-size: 10.5px;
+      }
+      svg .port-label.name {
+        fill: var(--text);
+        font-family: var(--font-sans);
+        font-size: 11px;
+      }
+      svg .chord {
+        fill: none;
+        stroke-width: 1.4;
+        opacity: 0.55;
+        stroke-linecap: round;
+      }
+      svg .chord.thick {
+        stroke-width: 2;
+        opacity: 0.85;
+      }
+
+      .center-card {
+        position: absolute;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        background: rgba(10,10,15,0.6);
+        backdrop-filter: blur(8px);
+        border: 1px solid var(--ring);
+        border-radius: 14px;
+        padding: 14px 22px;
+        box-shadow: 0 30px 60px -30px rgba(0,0,0,0.7);
+      }
+      .center-card .scene {
+        font-family: var(--font-mono); font-size: 0.7rem;
+        color: var(--muted);
+        text-transform: uppercase; letter-spacing: 0.16em;
+      }
+      .center-card h3 {
+        margin: 4px 0 8px;
+        font-size: 1.1rem;
+        font-weight: 600;
+      }
+      .center-card .stats {
+        display: grid; grid-template-columns: repeat(3, auto);
+        gap: 8px 16px;
+        font-family: var(--font-mono); font-size: 0.72rem;
+        color: var(--label);
+      }
+      .center-card .stats .num {
+        font-size: 1.1rem; color: var(--text); font-weight: 600;
+        display: block;
+      }
+      .center-card .stats .lbl { color: var(--muted); font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.1em; }
+
+      .legend-row {
+        max-width: 1100px; width: 100%;
+        margin-top: 0.5rem;
+        display: flex; flex-wrap: wrap; gap: 1rem;
+        font-family: var(--font-mono); font-size: 0.7rem; color: var(--muted);
+      }
+      .legend-row .swatch { display: inline-flex; align-items: center; gap: 0.4rem; }
+      .legend-row .swatch .dot { width: 8px; height: 8px; border-radius: 50%; }
+
+    </style>
+  </head>
+  <body>
+    <header class="bar">
+      <h1><span class="v">V8</span> Routing · Constellation</h1>
+      <span class="crumbs"><strong>festival-mainstage.scn</strong> · 28 chords</span>
+      <div class="right">
+        <span class="pill active">Constellation</span>
+        <span class="pill">Matrix</span>
+        <span class="pill">Patchbay</span>
+      </div>
+    </header>
+
+    <div class="stage">
+      <svg class="constellation" viewBox="0 0 1000 1000" id="cons"></svg>
+      <div class="center-card">
+        <div class="scene">festival-mainstage.scn</div>
+        <h3>Constellation</h3>
+        <div class="stats">
+          <div><span class="num">10</span><span class="lbl">Sources</span></div>
+          <div><span class="num">10</span><span class="lbl">Channels</span></div>
+          <div><span class="num">8</span><span class="lbl">Outputs</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="legend-row">
+      <span class="swatch"><span class="dot" style="background: var(--c-red)"></span> Vocals</span>
+      <span class="swatch"><span class="dot" style="background: var(--c-yellow)"></span> Drums</span>
+      <span class="swatch"><span class="dot" style="background: var(--c-cyan)"></span> Bass</span>
+      <span class="swatch"><span class="dot" style="background: var(--c-green)"></span> Guitar</span>
+      <span class="swatch"><span class="dot" style="background: var(--c-magenta)"></span> Keys</span>
+      <span class="swatch"><span class="dot" style="background: var(--c-white)"></span> Click / Mains</span>
+      <span style="margin-left: auto">v8 · constellation arrangement</span>
+    </div>
+
+    <script>
+      const NS = 'http://www.w3.org/2000/svg';
+      const CX = 500, CY = 500, R = 360;
+      // Convert clockwise-from-12 angle (deg) → SVG-friendly point on the ring at radius
+      function pt(gammaDeg, radius = R) {
+        const theta = (gammaDeg - 90) * Math.PI / 180;
+        return { x: CX + radius * Math.cos(theta), y: CY + radius * Math.sin(theta), gamma: gammaDeg };
+      }
+
+      // Three arc groups separated by 16° gaps.
+      // sources: 200° → 320°  (lower-left → upper-left, 120° span)
+      // channels: 336° → 64°  (upper-left across top to upper-right, 88° span)
+      // outputs: 80° → 184°   (upper-right around to lower-right, 104° span)
+      // gaps: 184°-200°, 320°-336°, 64°-80°
+      const SOURCE_GROUPS = [
+        { name: 'Local AN1-8', items: [
+          { id: 'AN 01', name: 'Lead Vox', color: 'red', key: 'src.local-01' },
+          { id: 'AN 02', name: 'BVox',     color: 'red', key: 'src.local-02' },
+          { id: 'AN 03', name: 'Kick',     color: 'yellow', key: 'src.local-03' },
+          { id: 'AN 04', name: 'Snare T',  color: 'yellow', key: 'src.local-04' },
+        ]},
+        { name: 'AES50-A', items: [
+          { id: 'A 01', name: 'Bass DI',   color: 'cyan',    key: 'src.aes50a-01' },
+          { id: 'A 09', name: 'Gtr L',     color: 'green',   key: 'src.aes50a-09' },
+          { id: 'A 10', name: 'Gtr R',     color: 'green',   key: 'src.aes50a-10' },
+          { id: 'A 17', name: 'Keys L',    color: 'magenta', key: 'src.aes50a-17' },
+          { id: 'A 18', name: 'Keys R',    color: 'magenta', key: 'src.aes50a-18' },
+        ]},
+        { name: 'Aux', items: [
+          { id: 'AUX 1', name: 'Click',    color: 'white',   key: 'src.auxin-01' },
+        ]},
+      ];
+
+      const CHANNEL_ITEMS = [
+        { id: 'Ch 01', name: 'Lead',  color: 'red',     key: 'ch.01' },
+        { id: 'Ch 02', name: 'BVox',  color: 'red',     key: 'ch.02' },
+        { id: 'Ch 03', name: 'Kick',  color: 'yellow',  key: 'ch.03' },
+        { id: 'Ch 04', name: 'Snare', color: 'yellow',  key: 'ch.04' },
+        { id: 'Ch 05', name: 'Bass',  color: 'cyan',    key: 'ch.05' },
+        { id: 'Ch 06', name: 'Gtr L', color: 'green',   key: 'ch.06' },
+        { id: 'Ch 07', name: 'Gtr R', color: 'green',   key: 'ch.07' },
+        { id: 'Ch 08', name: 'Keys L', color: 'magenta', key: 'ch.08' },
+        { id: 'Ch 09', name: 'Keys R', color: 'magenta', key: 'ch.09' },
+        { id: 'Aux 1', name: 'Click', color: 'white',   key: 'aux.01' },
+      ];
+
+      const OUTPUT_GROUPS = [
+        { name: 'XLR Out 1-8', items: [
+          { id: 'XLR 01', name: 'Mains L',   color: 'white',  key: 'out.xlr-01' },
+          { id: 'XLR 02', name: 'Mains R',   color: 'white',  key: 'out.xlr-02' },
+          { id: 'XLR 07', name: 'IEM Vox',   color: 'red',    key: 'out.xlr-07' },
+          { id: 'XLR 08', name: 'IEM Drums', color: 'yellow', key: 'out.xlr-08' },
+        ]},
+        { name: 'P-16', items: [
+          { id: 'P16 01', name: 'Lead',      color: 'red',    key: 'out.p16-01' },
+          { id: 'P16 03', name: 'Kick',      color: 'yellow', key: 'out.p16-03' },
+          { id: 'P16 05', name: 'Bass',      color: 'cyan',   key: 'out.p16-05' },
+        ]},
+        { name: 'AES50-B', items: [
+          { id: 'B 01',   name: 'Multitrack 1', color: 'red', key: 'out.aes50b-01' },
+        ]},
+      ];
+
+      // Routing: input side (source → channel)
+      const ROUTES_IN = [
+        ['src.local-01', 'ch.01', 'red'],
+        ['src.local-02', 'ch.02', 'red'],
+        ['src.local-03', 'ch.03', 'yellow'],
+        ['src.local-04', 'ch.04', 'yellow'],
+        ['src.aes50a-01', 'ch.05', 'cyan'],
+        ['src.aes50a-09', 'ch.06', 'green'],
+        ['src.aes50a-10', 'ch.07', 'green'],
+        ['src.aes50a-17', 'ch.08', 'magenta'],
+        ['src.aes50a-18', 'ch.09', 'magenta'],
+        ['src.auxin-01', 'aux.01', 'white'],
+      ];
+      // Output side (channel → physical out)
+      const ROUTES_OUT = [
+        ['ch.01', 'out.p16-01', 'red'],
+        ['ch.01', 'out.aes50b-01', 'red'],
+        ['ch.01', 'out.xlr-07', 'red'],
+        ['ch.02', 'out.xlr-07', 'red'],
+        ['ch.03', 'out.xlr-08', 'yellow'],
+        ['ch.03', 'out.p16-03', 'yellow'],
+        ['ch.04', 'out.xlr-08', 'yellow'],
+        ['ch.05', 'out.p16-05', 'cyan'],
+        ['ch.05', 'out.xlr-01', 'cyan'],
+        ['ch.05', 'out.xlr-02', 'cyan'],
+        ['ch.06', 'out.xlr-01', 'green'],
+        ['ch.07', 'out.xlr-02', 'green'],
+        ['ch.08', 'out.xlr-01', 'magenta'],
+        ['ch.09', 'out.xlr-02', 'magenta'],
+      ];
+
+      function spreadAngles(arcStart, arcEnd, n) {
+        // Distribute n points evenly within [arcStart, arcEnd], with half-step inset.
+        if (n <= 0) return [];
+        const span = arcEnd - arcStart;
+        const step = span / n;
+        return Array.from({ length: n }, (_, i) => arcStart + step * (i + 0.5));
+      }
+
+      function flat(groups) {
+        return groups.flatMap(g => g.items.map(it => ({ ...it, group: g.name })));
+      }
+
+      function mkSvgEl(tag, attrs = {}) {
+        const el = document.createElementNS(NS, tag);
+        for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+        return el;
+      }
+      function clearChildren(node) { while (node.firstChild) node.removeChild(node.firstChild); }
+
+      // SVG arc path helper
+      function arcPath(startGamma, endGamma, radius) {
+        const a = pt(startGamma, radius);
+        const b = pt(endGamma, radius);
+        const sweep = 1; // clockwise
+        let largeArc = (endGamma - startGamma + 360) % 360 > 180 ? 1 : 0;
+        return `M ${a.x} ${a.y} A ${radius} ${radius} 0 ${largeArc} ${sweep} ${b.x} ${b.y}`;
+      }
+
+      function build() {
+        const svg = document.getElementById('cons');
+        clearChildren(svg);
+
+        // base ring
+        svg.appendChild(mkSvgEl('circle', { cx: CX, cy: CY, r: R, class: 'ring-bg' }));
+        svg.appendChild(mkSvgEl('circle', { cx: CX, cy: CY, r: R - 18, class: 'ring-bg', 'stroke-dasharray': '2 6', opacity: '0.4' }));
+
+        // Group arcs (decorative bands)
+        const SRC_START = 200, SRC_END = 320;
+        const CH_START  = 336, CH_END  = 360 + 64; // wraps through 360
+        const OUT_START = 80,  OUT_END = 184;
+
+        const srcArc = mkSvgEl('path', {
+          d: arcPath(SRC_START, SRC_END, R),
+          class: 'group-arc lit',
+          stroke: 'var(--c-cyan)',
+        });
+        svg.appendChild(srcArc);
+        const chArc = mkSvgEl('path', {
+          d: arcPath(CH_START % 360, CH_END % 360, R),
+          class: 'group-arc lit',
+          stroke: 'var(--c-magenta)',
+        });
+        svg.appendChild(chArc);
+        const outArc = mkSvgEl('path', {
+          d: arcPath(OUT_START, OUT_END, R),
+          class: 'group-arc lit',
+          stroke: 'var(--c-yellow)',
+        });
+        svg.appendChild(outArc);
+
+        // Group labels — placed at midpoints, slightly outside the ring
+        function placeGroupLabel(gamma, text) {
+          const p = pt(gamma, R + 36);
+          const label = mkSvgEl('text', {
+            x: p.x, y: p.y,
+            class: 'group-label',
+            'text-anchor': 'middle',
+            'dominant-baseline': 'middle',
+          });
+          label.textContent = text;
+          svg.appendChild(label);
+        }
+        placeGroupLabel((SRC_START + SRC_END) / 2, 'Sources');
+        placeGroupLabel(0, 'Channels');
+        placeGroupLabel((OUT_START + OUT_END) / 2, 'Outputs');
+
+        // Distribute ports along their arcs
+        const sources = flat(SOURCE_GROUPS);
+        const channels = CHANNEL_ITEMS;
+        const outputs = flat(OUTPUT_GROUPS);
+
+        const srcAngles = spreadAngles(SRC_START + 4, SRC_END - 4, sources.length);
+        const chAngles  = spreadAngles(CH_START + 4, CH_END - 4, channels.length).map(g => g % 360);
+        const outAngles = spreadAngles(OUT_START + 4, OUT_END - 4, outputs.length);
+
+        const positions = new Map(); // key → { x, y, gamma, color }
+
+        function placePort(item, gamma, side /* 'left' | 'top' | 'right' */) {
+          const ringPt = pt(gamma, R);
+          const tickInner = pt(gamma, R - 6);
+          const tickOuter = pt(gamma, R + 8);
+
+          // Tick line crossing the ring
+          const tick = mkSvgEl('line', {
+            x1: tickInner.x, y1: tickInner.y, x2: tickOuter.x, y2: tickOuter.y,
+            class: 'port-tick',
+            stroke: `var(--c-${item.color})`,
+          });
+          svg.appendChild(tick);
+
+          // Port dot just outside the ring
+          const dot = mkSvgEl('circle', {
+            cx: tickOuter.x, cy: tickOuter.y, r: 3.5,
+            class: 'port lit',
+          });
+          dot.style.setProperty('--accent', `var(--c-${item.color})`);
+          svg.appendChild(dot);
+
+          // Label, rotated tangentially to the ring; flip on the bottom half
+          const labelPt = pt(gamma, R + 18);
+          const theta = (gamma - 90); // SVG rotation: 0 = pointing right
+          // We want text to read "outward". Compute rotation so baseline is roughly tangent.
+          const isLeftHalf = Math.cos(theta * Math.PI / 180) < 0;
+          let rot = theta;
+          let anchor = 'start';
+          if (isLeftHalf) { rot = theta + 180; anchor = 'end'; }
+          const label = mkSvgEl('text', {
+            x: labelPt.x, y: labelPt.y,
+            transform: `rotate(${rot} ${labelPt.x} ${labelPt.y})`,
+            'text-anchor': anchor,
+            'dominant-baseline': 'middle',
+            class: 'port-label',
+          });
+          const idTspan = mkSvgEl('tspan', {});
+          idTspan.textContent = item.id;
+          const sep = mkSvgEl('tspan', { dx: '6', fill: 'var(--muted)' });
+          sep.textContent = '·';
+          const nameTspan = mkSvgEl('tspan', { dx: '6', fill: 'var(--text)' });
+          nameTspan.textContent = item.name;
+          label.appendChild(idTspan);
+          label.appendChild(sep);
+          label.appendChild(nameTspan);
+          svg.appendChild(label);
+
+          positions.set(item.key, { ...ringPt, color: item.color });
+        }
+
+        sources.forEach((s, i) => placePort(s, srcAngles[i], 'left'));
+        channels.forEach((c, i) => placePort(c, chAngles[i], 'top'));
+        outputs.forEach((o, i) => placePort(o, outAngles[i], 'right'));
+
+        // Chords. Q control point at (CX,CY) makes nice curves toward center.
+        function drawChord(fromKey, toKey, color, thick = false) {
+          const a = positions.get(fromKey);
+          const b = positions.get(toKey);
+          if (!a || !b) return;
+          const path = mkSvgEl('path', {
+            d: `M ${a.x} ${a.y} Q ${CX} ${CY} ${b.x} ${b.y}`,
+            class: 'chord' + (thick ? ' thick' : ''),
+            stroke: `var(--c-${color})`,
+          });
+          svg.appendChild(path);
+        }
+
+        for (const [from, to, color] of ROUTES_IN)  drawChord(from, to, color, true);
+        for (const [from, to, color] of ROUTES_OUT) drawChord(from, to, color, false);
+      }
+
+      window.addEventListener('load', build);
+    </script>
+  </body>
+</html>

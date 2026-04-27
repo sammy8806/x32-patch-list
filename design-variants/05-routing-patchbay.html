@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>V5 · Routing Patchbay — X32 Patch List</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #0b0d10;
+        --panel-edge: #2a2f37;
+        --row-edge: #2a2f37;
+        --text: #e6e9ee;
+        --muted: #8b94a3;
+        --label: #c2c8d2;
+        --jack-rim: #45505d;
+        --jack-hole: #07090c;
+        --c-red: #ef4444;
+        --c-yellow: #eab308;
+        --c-green: #22c55e;
+        --c-cyan: #06b6d4;
+        --c-blue: #3b82f6;
+        --c-magenta: #d946ef;
+        --c-white: #e5e7eb;
+        --c-off: #4b5563;
+        --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+        --font-mono: "Geist Mono", ui-monospace, monospace;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0; padding: 0;
+        background: var(--bg);
+        background-image:
+          radial-gradient(circle at 20% 0%, #1a1f27 0, transparent 40%),
+          radial-gradient(circle at 80% 100%, #161a20 0, transparent 50%);
+        color: var(--text);
+        font-family: var(--font-sans);
+        -webkit-font-smoothing: antialiased;
+        min-height: 100vh;
+      }
+      body {
+        padding: 2rem 1.5rem 3rem;
+        display: flex; flex-direction: column; align-items: center;
+      }
+      header.page {
+        width: 100%; max-width: 1180px;
+        display: flex; align-items: baseline; justify-content: space-between;
+        margin-bottom: 1.25rem;
+      }
+      h1 {
+        font-size: 1.05rem; font-weight: 600; margin: 0;
+        letter-spacing: 0.02em;
+      }
+      h1 .v {
+        color: var(--muted); font-weight: 500; margin-right: 0.5rem;
+        font-family: var(--font-mono); font-size: 0.85rem;
+      }
+      .crumbs {
+        font-family: var(--font-mono); font-size: 0.75rem;
+        color: var(--muted);
+      }
+      .crumbs strong { color: var(--label); font-weight: 500; }
+
+      .bay {
+        position: relative;
+        width: 100%; max-width: 1180px;
+        background: linear-gradient(180deg, #1a1e24 0%, #14171c 100%);
+        border: 1px solid var(--panel-edge);
+        border-radius: 14px;
+        padding: 1.75rem 1.25rem 1.5rem;
+        box-shadow:
+          0 1px 0 rgba(255,255,255,0.04) inset,
+          0 -1px 0 rgba(0,0,0,0.4) inset,
+          0 30px 60px -20px rgba(0,0,0,0.6);
+      }
+      .screw {
+        position: absolute; width: 10px; height: 10px; border-radius: 50%;
+        background: radial-gradient(circle at 35% 35%, #6b7280, #2a2f37 60%, #14171c 90%);
+        box-shadow: 0 1px 1px rgba(0,0,0,0.5), inset 0 -1px 0 rgba(0,0,0,0.4);
+      }
+      .screw::after {
+        content: ''; position: absolute; inset: 30% 12%;
+        border-top: 1px solid #0a0c10; transform: rotate(35deg);
+      }
+      .screw.tl { top: 10px; left: 10px; }
+      .screw.tr { top: 10px; right: 10px; }
+      .screw.bl { bottom: 10px; left: 10px; }
+      .screw.br { bottom: 10px; right: 10px; }
+
+      .columns {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 6rem;
+        position: relative;
+        z-index: 2;
+      }
+      .col { display: flex; flex-direction: column; }
+      .col h2 {
+        margin: 0 0 0.75rem;
+        font-size: 0.7rem; font-weight: 600;
+        letter-spacing: 0.18em; text-transform: uppercase;
+        color: var(--muted);
+        font-family: var(--font-mono);
+        display: flex; align-items: center; gap: 0.5rem;
+      }
+      .col h2::before {
+        content: ''; width: 6px; height: 6px; border-radius: 50%;
+        background: var(--label); opacity: 0.5;
+      }
+      .col h2 .count { margin-left: auto; opacity: 0.7; }
+      .group { margin-bottom: 0.65rem; }
+      .group-name {
+        font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase;
+        color: var(--muted); opacity: 0.65;
+        margin: 0 4px 4px;
+        font-family: var(--font-mono);
+      }
+      .row {
+        position: relative;
+        display: grid;
+        grid-template-columns: 56px 1fr 18px;
+        align-items: center;
+        height: 32px;
+        padding: 0 8px 0 10px;
+        background: linear-gradient(180deg, #1f2329 0%, #181b21 100%);
+        border: 1px solid var(--row-edge);
+        border-radius: 6px;
+        margin-bottom: 4px;
+        box-shadow: 0 1px 0 rgba(255,255,255,0.03) inset;
+      }
+      .row .id {
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
+        color: var(--label);
+        font-weight: 500;
+      }
+      .row .name {
+        font-size: 0.78rem;
+        color: var(--text);
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      .row .name .meta {
+        color: var(--muted);
+        font-size: 0.7rem;
+        margin-left: 6px;
+      }
+      .jack {
+        position: relative;
+        width: 18px; height: 18px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 50% 40%, #2a2f37 0%, #14171c 60%, #07090c 100%);
+        border: 1.5px solid var(--jack-rim);
+        box-shadow: 0 1px 0 rgba(255,255,255,0.06), inset 0 1px 1px rgba(0,0,0,0.65);
+      }
+      .jack::after {
+        content: ''; position: absolute; inset: 5px;
+        border-radius: 50%;
+        background: var(--jack-hole);
+        box-shadow: inset 0 1px 1px rgba(0,0,0,0.9);
+      }
+      .jack.lit::before {
+        content: ''; position: absolute; inset: -3px;
+        border-radius: 50%;
+        background: radial-gradient(circle, var(--jack-glow, transparent) 0%, transparent 70%);
+        opacity: 0.55;
+      }
+      .col-input  .jack { justify-self: end; }
+      .col-output .row { grid-template-columns: 18px 1fr 56px; padding: 0 10px 0 8px; }
+      .col-output .row .id { text-align: right; }
+      .col-output .jack { justify-self: start; }
+      .col-channel .row {
+        grid-template-columns: 18px 6px 1fr 18px;
+        padding: 0 8px;
+        gap: 8px;
+      }
+      .col-channel .row .jack-in { justify-self: start; }
+      .col-channel .row .jack-out { justify-self: end; }
+      .col-channel .row .tab {
+        height: 16px; width: 4px; border-radius: 2px;
+        background: var(--tab, var(--c-off));
+        box-shadow: 0 0 0 1px rgba(255,255,255,0.05) inset;
+      }
+      .col-channel .row .id {
+        font-family: var(--font-mono);
+        font-size: 0.7rem;
+        color: var(--label);
+      }
+      svg.cables {
+        position: absolute; inset: 0;
+        width: 100%; height: 100%;
+        pointer-events: none;
+        z-index: 1;
+      }
+      .cable {
+        fill: none;
+        stroke-width: 2.5;
+        stroke-linecap: round;
+        opacity: 0.85;
+        filter: drop-shadow(0 2px 1px rgba(0,0,0,0.6));
+      }
+      footer.legend {
+        margin-top: 0.85rem;
+        font-family: var(--font-mono);
+        font-size: 0.7rem;
+        color: var(--muted);
+        display: flex; gap: 1.25rem; flex-wrap: wrap;
+        width: 100%; max-width: 1180px;
+        padding: 0 0.25rem;
+      }
+      footer.legend .swatch {
+        display: inline-flex; align-items: center; gap: 0.4rem;
+      }
+      footer.legend .swatch .dot {
+        width: 8px; height: 8px; border-radius: 50%;
+      }
+      .scene-tag {
+        display: inline-flex; align-items: center; gap: 0.4rem;
+        padding: 2px 8px; border-radius: 999px;
+        background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3);
+        color: #4ade80;
+        font-family: var(--font-mono); font-size: 0.7rem;
+        margin-left: 0.6rem;
+      }
+      .scene-tag::before {
+        content: ''; width: 5px; height: 5px; border-radius: 50%;
+        background: #4ade80; box-shadow: 0 0 6px #4ade80;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="page">
+      <h1>
+        <span class="v">V5</span> Routing · Patchbay
+        <span class="scene-tag">festival-mainstage.scn</span>
+      </h1>
+      <div class="crumbs">
+        <strong>Inputs</strong> → Channels → <strong>Outputs</strong>
+      </div>
+    </header>
+
+    <section class="bay">
+      <span class="screw tl"></span><span class="screw tr"></span>
+      <span class="screw bl"></span><span class="screw br"></span>
+
+      <svg class="cables" id="cables" viewBox="0 0 1180 720" preserveAspectRatio="none"></svg>
+
+      <div class="columns">
+        <div class="col col-input">
+          <h2>Inputs <span class="count">10</span></h2>
+          <div class="group">
+            <div class="group-name">Local · AN1-8</div>
+            <div class="row" data-out="src.local-01" style="--jack-glow: var(--c-red)">
+              <span class="id">AN 01</span>
+              <span class="name">Lead Vox <span class="meta">SM58</span></span>
+              <span class="jack lit"></span>
+            </div>
+            <div class="row" data-out="src.local-02" style="--jack-glow: var(--c-red)">
+              <span class="id">AN 02</span>
+              <span class="name">BVox <span class="meta">e835</span></span>
+              <span class="jack lit"></span>
+            </div>
+            <div class="row" data-out="src.local-03" style="--jack-glow: var(--c-yellow)">
+              <span class="id">AN 03</span>
+              <span class="name">Kick <span class="meta">B52</span></span>
+              <span class="jack lit"></span>
+            </div>
+            <div class="row" data-out="src.local-04" style="--jack-glow: var(--c-yellow)">
+              <span class="id">AN 04</span>
+              <span class="name">Snare T <span class="meta">SM57</span></span>
+              <span class="jack lit"></span>
+            </div>
+          </div>
+          <div class="group">
+            <div class="group-name">AES50-A · stage box</div>
+            <div class="row" data-out="src.aes50a-01" style="--jack-glow: var(--c-cyan)">
+              <span class="id">A 01</span>
+              <span class="name">Bass DI</span>
+              <span class="jack lit"></span>
+            </div>
+            <div class="row" data-out="src.aes50a-09" style="--jack-glow: var(--c-green)">
+              <span class="id">A 09</span>
+              <span class="name">Gtr L <span class="meta">421</span></span>
+              <span class="jack lit"></span>
+            </div>
+            <div class="row" data-out="src.aes50a-10" style="--jack-glow: var(--c-green)">
+              <span class="id">A 10</span>
+              <span class="name">Gtr R <span class="meta">421</span></span>
+              <span class="jack lit"></span>
+            </div>
+            <div class="row" data-out="src.aes50a-17" style="--jack-glow: var(--c-magenta)">
+              <span class="id">A 17</span>
+              <span class="name">Keys L</span>
+              <span class="jack lit"></span>
+            </div>
+            <div class="row" data-out="src.aes50a-18" style="--jack-glow: var(--c-magenta)">
+              <span class="id">A 18</span>
+              <span class="name">Keys R</span>
+              <span class="jack lit"></span>
+            </div>
+          </div>
+          <div class="group">
+            <div class="group-name">Aux · rear panel</div>
+            <div class="row" data-out="src.auxin-01" style="--jack-glow: var(--c-white)">
+              <span class="id">AUX 1</span>
+              <span class="name">Click <span class="meta">click track</span></span>
+              <span class="jack lit"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="col col-channel">
+          <h2>Channels <span class="count">10</span></h2>
+          <div class="group">
+            <div class="group-name">Input strips · Ch 01-32</div>
+            <div class="row" data-in="ch.01.in" data-out="ch.01.out" style="--tab: var(--c-red); --jack-glow: var(--c-red)">
+              <span class="jack jack-in lit"></span>
+              <span class="tab"></span>
+              <span class="id">01 · Lead</span>
+              <span class="jack jack-out lit"></span>
+            </div>
+            <div class="row" data-in="ch.02.in" data-out="ch.02.out" style="--tab: var(--c-red); --jack-glow: var(--c-red)">
+              <span class="jack jack-in lit"></span>
+              <span class="tab"></span>
+              <span class="id">02 · BVox</span>
+              <span class="jack jack-out lit"></span>
+            </div>
+            <div class="row" data-in="ch.03.in" data-out="ch.03.out" style="--tab: var(--c-yellow); --jack-glow: var(--c-yellow)">
+              <span class="jack jack-in lit"></span>
+              <span class="tab"></span>
+              <span class="id">03 · Kick</span>
+              <span class="jack jack-out lit"></span>
+            </div>
+            <div class="row" data-in="ch.04.in" data-out="ch.04.out" style="--tab: var(--c-yellow); --jack-glow: var(--c-yellow)">
+              <span class="jack jack-in lit"></span>
+              <span class="tab"></span>
+              <span class="id">04 · Snare</span>
+              <span class="jack jack-out lit"></span>
+            </div>
+            <div class="row" data-in="ch.05.in" data-out="ch.05.out" style="--tab: var(--c-cyan); --jack-glow: var(--c-cyan)">
+              <span class="jack jack-in lit"></span>
+              <span class="tab"></span>
+              <span class="id">05 · Bass</span>
+              <span class="jack jack-out lit"></span>
+            </div>
+            <div class="row" data-in="ch.06.in" data-out="ch.06.out" style="--tab: var(--c-green); --jack-glow: var(--c-green)">
+              <span class="jack jack-in lit"></span>
+              <span class="tab"></span>
+              <span class="id">06 · Gtr L</span>
+              <span class="jack jack-out lit"></span>
+            </div>
+            <div class="row" data-in="ch.07.in" data-out="ch.07.out" style="--tab: var(--c-green); --jack-glow: var(--c-green)">
+              <span class="jack jack-in lit"></span>
+              <span class="tab"></span>
+              <span class="id">07 · Gtr R</span>
+              <span class="jack jack-out lit"></span>
+            </div>
+            <div class="row" data-in="ch.08.in" data-out="ch.08.out" style="--tab: var(--c-magenta); --jack-glow: var(--c-magenta)">
+              <span class="jack jack-in lit"></span>
+              <span class="tab"></span>
+              <span class="id">08 · Keys L</span>
+              <span class="jack jack-out lit"></span>
+            </div>
+            <div class="row" data-in="ch.09.in" data-out="ch.09.out" style="--tab: var(--c-magenta); --jack-glow: var(--c-magenta)">
+              <span class="jack jack-in lit"></span>
+              <span class="tab"></span>
+              <span class="id">09 · Keys R</span>
+              <span class="jack jack-out lit"></span>
+            </div>
+            <div class="row" data-in="aux.01.in" data-out="aux.01.out" style="--tab: var(--c-white); --jack-glow: var(--c-white)">
+              <span class="jack jack-in lit"></span>
+              <span class="tab"></span>
+              <span class="id">Aux 1 · Click</span>
+              <span class="jack jack-out lit"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="col col-output">
+          <h2>Outputs <span class="count">8</span></h2>
+          <div class="group">
+            <div class="group-name">Local · XLR Out 1-16</div>
+            <div class="row" data-in="out.xlr-01" style="--jack-glow: var(--c-white)">
+              <span class="jack lit"></span>
+              <span class="name">Mains L</span>
+              <span class="id">XLR 01</span>
+            </div>
+            <div class="row" data-in="out.xlr-02" style="--jack-glow: var(--c-white)">
+              <span class="jack lit"></span>
+              <span class="name">Mains R</span>
+              <span class="id">XLR 02</span>
+            </div>
+            <div class="row" data-in="out.xlr-07" style="--jack-glow: var(--c-red)">
+              <span class="jack lit"></span>
+              <span class="name">IEM Vox <span class="meta">Bus 1</span></span>
+              <span class="id">XLR 07</span>
+            </div>
+            <div class="row" data-in="out.xlr-08" style="--jack-glow: var(--c-yellow)">
+              <span class="jack lit"></span>
+              <span class="name">IEM Drums <span class="meta">Bus 2</span></span>
+              <span class="id">XLR 08</span>
+            </div>
+          </div>
+          <div class="group">
+            <div class="group-name">P-16 · personal monitors</div>
+            <div class="row" data-in="out.p16-01" style="--jack-glow: var(--c-red)">
+              <span class="jack lit"></span>
+              <span class="name">Lead Vox</span>
+              <span class="id">P16 01</span>
+            </div>
+            <div class="row" data-in="out.p16-03" style="--jack-glow: var(--c-yellow)">
+              <span class="jack lit"></span>
+              <span class="name">Kick</span>
+              <span class="id">P16 03</span>
+            </div>
+            <div class="row" data-in="out.p16-05" style="--jack-glow: var(--c-cyan)">
+              <span class="jack lit"></span>
+              <span class="name">Bass</span>
+              <span class="id">P16 05</span>
+            </div>
+          </div>
+          <div class="group">
+            <div class="group-name">AES50-B · recording</div>
+            <div class="row" data-in="out.aes50b-01" style="--jack-glow: var(--c-red)">
+              <span class="jack lit"></span>
+              <span class="name">Multitrack 01</span>
+              <span class="id">B 01</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="legend">
+      <span class="swatch"><span class="dot" style="background: var(--c-red)"></span> Vocals</span>
+      <span class="swatch"><span class="dot" style="background: var(--c-yellow)"></span> Drums</span>
+      <span class="swatch"><span class="dot" style="background: var(--c-cyan)"></span> Bass</span>
+      <span class="swatch"><span class="dot" style="background: var(--c-green)"></span> Guitar</span>
+      <span class="swatch"><span class="dot" style="background: var(--c-magenta)"></span> Keys</span>
+      <span class="swatch"><span class="dot" style="background: var(--c-white)"></span> Click / Mains</span>
+      <span style="margin-left: auto">v5 · patchbay arrangement</span>
+    </footer>
+
+    <script>
+      const CONNECTIONS = [
+        ['src.local-01', 'ch.01.in', 'red'],
+        ['src.local-02', 'ch.02.in', 'red'],
+        ['src.local-03', 'ch.03.in', 'yellow'],
+        ['src.local-04', 'ch.04.in', 'yellow'],
+        ['src.aes50a-01', 'ch.05.in', 'cyan'],
+        ['src.aes50a-09', 'ch.06.in', 'green'],
+        ['src.aes50a-10', 'ch.07.in', 'green'],
+        ['src.aes50a-17', 'ch.08.in', 'magenta'],
+        ['src.aes50a-18', 'ch.09.in', 'magenta'],
+        ['src.auxin-01',  'aux.01.in', 'white'],
+        ['ch.01.out', 'out.p16-01', 'red'],
+        ['ch.01.out', 'out.aes50b-01', 'red'],
+        ['ch.03.out', 'out.p16-03', 'yellow'],
+        ['ch.05.out', 'out.p16-05', 'cyan'],
+        ['ch.01.out', 'out.xlr-07', 'red'],
+        ['ch.02.out', 'out.xlr-07', 'red'],
+        ['ch.03.out', 'out.xlr-08', 'yellow'],
+        ['ch.04.out', 'out.xlr-08', 'yellow'],
+        ['ch.01.out', 'out.xlr-01', 'white'],
+        ['ch.01.out', 'out.xlr-02', 'white'],
+        ['ch.05.out', 'out.xlr-01', 'white'],
+        ['ch.05.out', 'out.xlr-02', 'white'],
+        ['ch.06.out', 'out.xlr-01', 'white'],
+        ['ch.07.out', 'out.xlr-02', 'white'],
+        ['ch.08.out', 'out.xlr-01', 'white'],
+        ['ch.09.out', 'out.xlr-02', 'white'],
+      ];
+
+      function jackCenter(row, side) {
+        const containerR = document.querySelector('.bay').getBoundingClientRect();
+        const jacks = row.querySelectorAll('.jack');
+        const jack = side === 'in' ? jacks[0] : jacks[jacks.length - 1];
+        const jr = jack.getBoundingClientRect();
+        return {
+          x: jr.left - containerR.left + jr.width / 2,
+          y: jr.top - containerR.top + jr.height / 2,
+        };
+      }
+
+      function clearChildren(node) {
+        while (node.firstChild) node.removeChild(node.firstChild);
+      }
+
+      function draw() {
+        const svg = document.getElementById('cables');
+        const containerR = document.querySelector('.bay').getBoundingClientRect();
+        svg.setAttribute('viewBox', `0 0 ${containerR.width} ${containerR.height}`);
+        clearChildren(svg);
+
+        const NS = 'http://www.w3.org/2000/svg';
+        for (const [fromId, toId, color] of CONNECTIONS) {
+          const from = document.querySelector(`[data-out="${fromId}"]`);
+          const to = document.querySelector(`[data-in="${toId}"]`);
+          if (!from || !to) continue;
+          const a = jackCenter(from, 'out');
+          const b = jackCenter(to, 'in');
+          const dx = Math.max(60, (b.x - a.x) * 0.55);
+          const sag = Math.min(40, Math.abs(b.x - a.x) * 0.06);
+          const path = `M ${a.x} ${a.y} C ${a.x + dx} ${a.y + sag}, ${b.x - dx} ${b.y + sag}, ${b.x} ${b.y}`;
+          const el = document.createElementNS(NS, 'path');
+          el.setAttribute('d', path);
+          el.setAttribute('class', 'cable');
+          el.setAttribute('stroke', `var(--c-${color})`);
+          svg.appendChild(el);
+        }
+      }
+      window.addEventListener('load', draw);
+      window.addEventListener('resize', draw);
+    </script>
+  </body>
+</html>
