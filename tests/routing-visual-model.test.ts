@@ -44,4 +44,49 @@ describe('routing visual model', () => {
     expect(connectionKeys).toContain('proc:bus.01:out->user:user-out.01:in');
     expect(connectionKeys).toContain('user:user-out.01:out->out:out.01:in');
   });
+
+  test('respects patch-list row and section visibility by default', () => {
+    const parser = parseScene(`
+      /config/userrout/in/01 33
+      /config/userrout/out/01 169
+      /config/routing/IN/1-8 UIN1-8
+      /config/routing/OUT/1-4 UOUT1-4
+      /ch/01/config Vox 0 RD 1
+      /bus/01/config Monitor 0 YE
+    `);
+
+    const hidden = buildRoutingVisualModel(parser, {
+      visibleRows: {
+        'input:aes50a:0:0': false,
+      },
+      visibleSections: {
+        'output:out': false,
+      },
+    });
+
+    expect(hidden.sources.map((source) => source.key)).not.toContain('aes50a.01');
+    expect(hidden.processors.map((processor) => processor.key)).not.toContain(
+      'in.01',
+    );
+    expect(hidden.outputs).toHaveLength(0);
+    expect(hidden.stats.activeUserInputs).toBe(0);
+    expect(hidden.userInputs).toHaveLength(0);
+    expect(hidden.userOutputs).toHaveLength(0);
+
+    const full = buildRoutingVisualModel(parser, {
+      visibleRows: {
+        'input:aes50a:0:0': false,
+      },
+      visibleSections: {
+        'output:out': false,
+      },
+      includeHidden: true,
+    });
+
+    expect(full.sources.map((source) => source.key)).toContain('aes50a.01');
+    expect(full.processors.map((processor) => processor.key)).toContain('in.01');
+    expect(full.outputs.map((output) => output.key)).toContain('out.01');
+    expect(full.stats.activeUserInputs).toBe(1);
+    expect(full.userInputs.length).toBeGreaterThan(1);
+  });
 });

@@ -531,6 +531,8 @@ export class AppShell extends LitElement {
           .parser=${this.parser}
           .mode=${this.viewMode === 'nodes' ? 'nodes' : 'patchbay'}
           .filename=${this.session.filename}
+          .visibleRows=${this.session.visibleRows}
+          .visibleSections=${this.session.visibleSections}
         ></x32-routing-visualizer>
       `;
     }

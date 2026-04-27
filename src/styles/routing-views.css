@@ -17,6 +17,10 @@
   color: var(--muted);
 }
 
+.routing-empty .rv-visibility-toggle {
+  margin-top: 1rem;
+}
+
 .routing-visual {
   --rv-font: "Avenir Next", "Segoe UI", system-ui, sans-serif;
   --rv-mono: "SFMono-Regular", "Cascadia Mono", ui-monospace, monospace;
@@ -42,6 +46,22 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 1rem;
+}
+
+.rv-visibility-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: none;
+  color: var(--rv-muted, var(--muted));
+  font-family: var(--rv-mono);
+  font-size: 0.7rem;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.rv-visibility-toggle input {
+  margin: 0;
 }
 
 .rv-patchbay-header h2 {
@@ -442,6 +462,10 @@
   border-bottom: 1px solid var(--rv-node-edge);
   background: rgba(255, 255, 255, 0.86);
   backdrop-filter: saturate(140%) blur(8px);
+}
+
+.rv-node-bar .rv-visibility-toggle {
+  margin-left: auto;
 }
 
 .rv-brand {

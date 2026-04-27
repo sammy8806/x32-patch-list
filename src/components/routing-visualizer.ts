@@ -37,11 +37,14 @@ export class RoutingVisualizer extends LitElement {
   @property({ attribute: false }) parser!: ScnParser;
   @property({ type: String }) mode: RoutingVisualMode = 'patchbay';
   @property({ type: String }) filename = '';
+  @property({ attribute: false }) visibleRows: Record<string, boolean> = {};
+  @property({ attribute: false }) visibleSections: Record<string, boolean> = {};
 
   @state() private previewPins: string[] = [];
   @state() private lockedPins: string[] = [];
   @state() private previewConnection: string | null = null;
   @state() private lockedConnection: string | null = null;
+  @state() private includeHidden = false;
 
   private model: RoutingVisualModel | null = null;
 
@@ -49,7 +52,13 @@ export class RoutingVisualizer extends LitElement {
   private onWindowResize = () => this.scheduleDraw();
 
   override willUpdate(): void {
-    this.model = this.parser ? buildRoutingVisualModel(this.parser) : null;
+    this.model = this.parser
+      ? buildRoutingVisualModel(this.parser, {
+          visibleRows: this.visibleRows,
+          visibleSections: this.visibleSections,
+          includeHidden: this.includeHidden,
+        })
+      : null;
   }
 
   override connectedCallback(): void {
@@ -73,6 +82,7 @@ export class RoutingVisualizer extends LitElement {
         <section class="routing-empty">
           <h2>Routing view</h2>
           <p>No active routing paths were found in this scene.</p>
+          ${this.renderVisibilityToggle()}
         </section>
       `;
     }
@@ -153,6 +163,7 @@ export class RoutingVisualizer extends LitElement {
             <span>${model.stats.activeUserOutputs} UOUT</span>
             → ${model.stats.outputs} outputs
           </span>
+          ${this.renderVisibilityToggle()}
         </header>
 
         <main class="rv-node-canvas">
@@ -203,7 +214,21 @@ export class RoutingVisualizer extends LitElement {
           <span>→</span>
           <strong>${model.stats.outputs} outputs</strong>
         </div>
+        ${this.renderVisibilityToggle()}
       </header>
+    `;
+  }
+
+  private renderVisibilityToggle() {
+    return html`
+      <label class="rv-visibility-toggle">
+        <input
+          type="checkbox"
+          .checked=${this.includeHidden}
+          @change=${this.onIncludeHiddenChange}
+        />
+        <span>Include hidden</span>
+      </label>
     `;
   }
 
@@ -579,6 +604,12 @@ export class RoutingVisualizer extends LitElement {
   private clearLockedHighlight = (): void => {
     this.lockedPins = [];
     this.lockedConnection = null;
+  };
+
+  private onIncludeHiddenChange = (event: Event): void => {
+    this.includeHidden = (event.target as HTMLInputElement).checked;
+    this.clearPreviewHighlight();
+    this.clearLockedHighlight();
   };
 
   private activePinSet(): Set<string> {

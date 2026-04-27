@@ -1,4 +1,5 @@
 import {
+  INPUT_TABLE_TYPES,
   OUTPUT_TABLE_TYPES,
   TYPE_NAMES,
 } from './parser/constants.js';
@@ -92,11 +93,28 @@ export interface RoutingVisualModel {
   };
 }
 
+export interface RoutingVisibilityState {
+  visibleRows?: Record<string, boolean>;
+  visibleSections?: Record<string, boolean>;
+  includeHidden?: boolean;
+}
+
+interface VisibilityContext {
+  includeHidden: boolean;
+  visibleSources: Set<string>;
+  visibleProcessors: Set<string>;
+  visibleOutputs: Set<string>;
+}
+
 type Producer =
   | { kind: 'source'; key: string; color: string }
   | { kind: 'processor'; key: string; color: string };
 
-export function buildRoutingVisualModel(parser: ScnParser): RoutingVisualModel {
+export function buildRoutingVisualModel(
+  parser: ScnParser,
+  visibility: RoutingVisibilityState = {},
+): RoutingVisualModel {
+  const visibilityContext = buildVisibilityContext(parser, visibility);
   const sourceKeys = new Map<string, string>();
   const processorKeys = new Map<string, string>();
   const outputKeys = new Map<string, { color: string; row: Channel | null }>();
@@ -106,8 +124,10 @@ export function buildRoutingVisualModel(parser: ScnParser): RoutingVisualModel {
 
   for (const [channelKey, channel] of Object.entries(parser.channels)) {
     if (!channel.route_key) continue;
+    if (!isProcessorVisible(visibilityContext, channelKey)) continue;
     const route = parser.route[channel.route_key];
     if (!route?.source_key || route.source_key === 'off') continue;
+    if (!isSourceVisible(visibilityContext, route.source_key)) continue;
 
     const color = colorForChannel(channel);
     sourceKeys.set(route.source_key, color);
@@ -141,11 +161,18 @@ export function buildRoutingVisualModel(parser: ScnParser): RoutingVisualModel {
     const rows = parser.getOutputListForType(outputType);
     for (let index = 0; index < rows.length; index += 1) {
       const outputKey = `${outputType}.${PAD(index + 1)}`;
+      if (!isOutputVisible(visibilityContext, outputKey)) continue;
       const rawSource = rawOutputSource(parser, outputType, outputKey);
       if (!rawSource) continue;
 
       const row = outputRowChannel(rows[index]);
-      const producer = resolveProducer(parser, rawSource, sourceKeys, processorKeys);
+      const producer = resolveProducer(
+        parser,
+        rawSource,
+        sourceKeys,
+        processorKeys,
+        visibilityContext,
+      );
       if (!producer) continue;
 
       const color = row ? colorForChannel(row) : producer.color;
@@ -191,12 +218,14 @@ export function buildRoutingVisualModel(parser: ScnParser): RoutingVisualModel {
     'user-in',
     32,
     userInputColors,
+    visibilityContext.includeHidden,
   );
   const userOutputs = buildUserSlots(
     parser.userRouteByName,
     'user-out',
     48,
     userOutputColors,
+    visibilityContext.includeHidden,
   );
 
   return {
@@ -262,24 +291,27 @@ function resolveProducer(
   rawSource: string,
   sourceKeys: Map<string, string>,
   processorKeys: Map<string, string>,
+  visibility: VisibilityContext,
 ): Producer | null {
   const linkedSource = rawSource in parser.outputs ? parser.outputs[rawSource] : rawSource;
   if (!linkedSource) return null;
 
   const directChannel = parser.channels[linkedSource];
   if (directChannel) {
+    if (!isProcessorVisible(visibility, linkedSource)) return null;
     const color = colorForChannel(directChannel);
     processorKeys.set(linkedSource, color);
     return { kind: 'processor', key: linkedSource, color };
   }
 
-  const routedChannel = firstChannelForSource(parser, linkedSource);
+  const routedChannel = firstChannelForSource(parser, linkedSource, visibility);
   if (routedChannel) {
     const color = colorForChannel(routedChannel.channel);
     processorKeys.set(routedChannel.key, color);
     return { kind: 'processor', key: routedChannel.key, color };
   }
 
+  if (!isSourceVisible(visibility, linkedSource)) return null;
   sourceKeys.set(linkedSource, sourceKeys.get(linkedSource) ?? '#6b7280');
   return { kind: 'source', key: linkedSource, color: '#6b7280' };
 }
@@ -287,16 +319,20 @@ function resolveProducer(
 function firstChannelForSource(
   parser: ScnParser,
   sourceKey: string,
+  visibility: VisibilityContext,
 ): { key: string; channel: Channel } | null {
   const routeKeys = parser.inputRouteSource[sourceKey];
   if (!routeKeys) return null;
 
   for (const routeKey of routeKeys) {
     const channels = parser.channelByRoute[routeKey];
-    const first = channels?.[0];
-    if (!first) continue;
-    const match = Object.entries(parser.channels).find(([, channel]) => channel === first);
-    if (match) return { key: match[0], channel: first };
+    if (!channels) continue;
+    for (const channel of channels) {
+      const match = Object.entries(parser.channels).find(([, candidate]) => candidate === channel);
+      if (match && isProcessorVisible(visibility, match[0])) {
+        return { key: match[0], channel };
+      }
+    }
   }
   return null;
 }
@@ -369,7 +405,27 @@ function buildUserSlots(
   prefix: 'user-in' | 'user-out',
   total: number,
   colors: Map<string, string>,
+  includeHidden: boolean,
 ): UserRouteSlot[] {
+  if (!includeHidden) {
+    return [...colors.keys()]
+      .filter((key) => key.startsWith(`${prefix}.`))
+      .sort(keySort)
+      .map((key) => {
+        const sourceKey = userRouteByName[key] ?? null;
+        const source = sourceKey ? sourceParts(sourceKey) : null;
+        return {
+          id: `user:${key}`,
+          key,
+          label: `U-${key.split('.')[1] ?? ''}`,
+          meta: source?.label ?? '',
+          sourceKey,
+          color: colors.get(key) ?? '#94a3b8',
+          active: sourceKey !== null,
+        };
+      });
+  }
+
   let maxActiveIndex = 0;
   for (const [key, sourceKey] of Object.entries(userRouteByName)) {
     if (!key.startsWith(`${prefix}.`) || !sourceKey) continue;
@@ -465,4 +521,104 @@ function keySort(a: string, b: string): number {
     return numericA - numericB;
   }
   return a.localeCompare(b);
+}
+
+function buildVisibilityContext(
+  parser: ScnParser,
+  visibility: RoutingVisibilityState,
+): VisibilityContext {
+  const context: VisibilityContext = {
+    includeHidden: visibility.includeHidden === true,
+    visibleSources: new Set(),
+    visibleProcessors: new Set(),
+    visibleOutputs: new Set(),
+  };
+
+  if (context.includeHidden) return context;
+
+  const rowState = visibility.visibleRows ?? {};
+  const sectionState = visibility.visibleSections ?? {};
+
+  for (const inputType of INPUT_TABLE_TYPES) {
+    const rows = parser.getChannelListForType(inputType);
+    const sectionKey = `input:${inputType}`;
+    const defaultSectionVisible = parser.hasTypeAnythingAssigned(rows);
+    const sectionVisible =
+      sectionKey in sectionState ? sectionState[sectionKey] : defaultSectionVisible;
+    if (!sectionVisible) continue;
+
+    rows.forEach((row, lineIndex) => {
+      if (!row) return;
+      const sourceKey = `${inputType}.${PAD(lineIndex + 1)}`;
+      row.forEach((channel, subIndex) => {
+        const rowKey = `input:${inputType}:${lineIndex}:${subIndex}`;
+        const rowVisible = rowKey in rowState ? rowState[rowKey] : true;
+        if (!rowVisible) return;
+
+        const channelKey = channelKeyFor(parser, channel);
+        if (!channelKey) return;
+        context.visibleSources.add(sourceKey);
+        context.visibleProcessors.add(channelKey);
+      });
+    });
+  }
+
+  for (const outputType of OUTPUT_TABLE_TYPES) {
+    const rows = parser.getOutputListForType(outputType);
+    const sectionKey = `output:${outputType}`;
+    const defaultSectionVisible = parser.hasTypeAnythingAssigned(rows);
+    const sectionVisible =
+      sectionKey in sectionState ? sectionState[sectionKey] : defaultSectionVisible;
+    if (!sectionVisible) continue;
+
+    rows.forEach((row, lineIndex) => {
+      if (!row) return;
+      const rowKey = `output:${outputType}:${lineIndex}:0`;
+      const rowVisible = rowKey in rowState ? rowState[rowKey] : true;
+      if (rowVisible) {
+        const outputKey = `${outputType}.${PAD(lineIndex + 1)}`;
+        context.visibleOutputs.add(outputKey);
+        addVisibleOutputProducer(parser, context, rawOutputSource(parser, outputType, outputKey));
+      }
+    });
+  }
+
+  return context;
+}
+
+function addVisibleOutputProducer(
+  parser: ScnParser,
+  context: VisibilityContext,
+  rawSource: string | null,
+): void {
+  if (!rawSource) return;
+  const linkedSource = rawSource in parser.outputs ? parser.outputs[rawSource] : rawSource;
+  if (!linkedSource) return;
+
+  const channel = parser.channels[linkedSource];
+  if (channel && !channel.route_key) {
+    context.visibleProcessors.add(linkedSource);
+    return;
+  }
+
+  if (!channel) {
+    context.visibleSources.add(linkedSource);
+  }
+}
+
+function channelKeyFor(parser: ScnParser, target: Channel): string | null {
+  const match = Object.entries(parser.channels).find(([, channel]) => channel === target);
+  return match?.[0] ?? null;
+}
+
+function isSourceVisible(context: VisibilityContext, key: string): boolean {
+  return context.includeHidden || context.visibleSources.has(key);
+}
+
+function isProcessorVisible(context: VisibilityContext, key: string): boolean {
+  return context.includeHidden || context.visibleProcessors.has(key);
+}
+
+function isOutputVisible(context: VisibilityContext, key: string): boolean {
+  return context.includeHidden || context.visibleOutputs.has(key);
 }
