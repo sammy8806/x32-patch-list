@@ -30,6 +30,10 @@ export type RoutingVisualMode = 'patchbay' | 'nodes';
 
 type NodeGraphKind = 'source' | 'processor' | 'output' | 'user-patch';
 
+const NODE_GRAPH_LABEL_TOP = 12;
+const NODE_GRAPH_TOP = 44;
+const NODE_GRAPH_GAP = 22;
+
 interface NodePoint {
   x: number;
   y: number;
@@ -225,7 +229,7 @@ export class RoutingVisualizer extends LitElement {
                     'rv-lane-label': true,
                     user: lane.label.includes('User Patch'),
                   })}
-                  style=${`left: ${lane.x}px; top: 24px;`}
+                  style=${`left: ${lane.x}px; top: ${NODE_GRAPH_LABEL_TOP}px;`}
                 >
                   ${lane.label}
                 </div>
@@ -664,7 +668,7 @@ export class RoutingVisualizer extends LitElement {
       this.dragState.startX + event.clientX - this.dragState.startPointerX,
     );
     const y = Math.max(
-      56,
+      NODE_GRAPH_TOP,
       this.dragState.startY + event.clientY - this.dragState.startPointerY,
     );
     this.nodeOverrides = {
@@ -794,6 +798,7 @@ function buildNodeGraphLayout(
 ): NodeGraphLayout {
   const nodes: NodeGraphNode[] = [];
   const pinToNode = new Map<string, string>();
+  const pinOffsets = new Map<string, number>();
   let order = 0;
 
   for (const [group, endpoints] of groupBy(model.sources, (endpoint) => endpoint.group)) {
@@ -808,7 +813,11 @@ function buildNodeGraphLayout(
       rowCount: endpoints.length,
       endpoints,
     });
-    for (const endpoint of endpoints) pinToNode.set(sourceOutPin(endpoint.key), id);
+    endpoints.forEach((endpoint, index) => {
+      const pin = sourceOutPin(endpoint.key);
+      pinToNode.set(pin, id);
+      pinOffsets.set(pin, nodeRowOffset(index));
+    });
   }
 
   if (model.userInputs.length > 0) {
@@ -823,10 +832,12 @@ function buildNodeGraphLayout(
       rowCount: model.userInputs.length,
       slots: model.userInputs,
     });
-    for (const slot of model.userInputs) {
+    model.userInputs.forEach((slot, index) => {
       pinToNode.set(userInPin(slot.key), id);
       pinToNode.set(userOutPin(slot.key), id);
-    }
+      pinOffsets.set(userInPin(slot.key), nodeRowOffset(index));
+      pinOffsets.set(userOutPin(slot.key), nodeRowOffset(index));
+    });
   }
 
   for (const [group, endpoints] of groupBy(model.processors, (endpoint) => endpoint.group)) {
@@ -841,10 +852,12 @@ function buildNodeGraphLayout(
       rowCount: endpoints.length,
       endpoints,
     });
-    for (const endpoint of endpoints) {
+    endpoints.forEach((endpoint, index) => {
       pinToNode.set(processorInPin(endpoint.key), id);
       pinToNode.set(processorOutPin(endpoint.key), id);
-    }
+      pinOffsets.set(processorInPin(endpoint.key), nodeRowOffset(index));
+      pinOffsets.set(processorOutPin(endpoint.key), nodeRowOffset(index));
+    });
   }
 
   if (model.userOutputs.length > 0) {
@@ -859,10 +872,12 @@ function buildNodeGraphLayout(
       rowCount: model.userOutputs.length,
       slots: model.userOutputs,
     });
-    for (const slot of model.userOutputs) {
+    model.userOutputs.forEach((slot, index) => {
       pinToNode.set(userInPin(slot.key), id);
       pinToNode.set(userOutPin(slot.key), id);
-    }
+      pinOffsets.set(userInPin(slot.key), nodeRowOffset(index));
+      pinOffsets.set(userOutPin(slot.key), nodeRowOffset(index));
+    });
   }
 
   for (const [group, endpoints] of groupBy(model.outputs, (endpoint) => endpoint.group)) {
@@ -877,13 +892,17 @@ function buildNodeGraphLayout(
       rowCount: endpoints.length,
       endpoints,
     });
-    for (const endpoint of endpoints) pinToNode.set(outputInPin(endpoint.key), id);
+    endpoints.forEach((endpoint, index) => {
+      const pin = outputInPin(endpoint.key);
+      pinToNode.set(pin, id);
+      pinOffsets.set(pin, nodeRowOffset(index));
+    });
   }
 
   const positioned: PositionedNode[] = nodes.map((node) => ({
     ...node,
     x: rankX(node.rank),
-    y: 72,
+    y: NODE_GRAPH_TOP,
     height: estimateNodeHeight(node),
   }));
   if (positioned.length === 0) {
@@ -894,8 +913,10 @@ function buildNodeGraphLayout(
     .map((connection) => ({
       from: pinToNode.get(connection.fromPin),
       to: pinToNode.get(connection.toPin),
+      fromPin: connection.fromPin,
+      toPin: connection.toPin,
     }))
-    .filter((edge): edge is { from: string; to: string } =>
+    .filter((edge): edge is { from: string; to: string; fromPin: string; toPin: string } =>
       Boolean(edge.from && edge.to && edge.from !== edge.to),
     );
 
@@ -910,16 +931,18 @@ function buildNodeGraphLayout(
     for (const rank of uniqueRanks(positioned).slice(1)) {
       packRank(
         positioned.filter((node) => node.rank === rank),
-        desiredCenters(positioned, byId, edges, rank, 'incoming'),
+        desiredCenters(positioned, byId, edges, pinOffsets, rank, 'incoming'),
       );
     }
     for (const rank of uniqueRanks(positioned).slice(0, -1).reverse()) {
       packRank(
         positioned.filter((node) => node.rank === rank),
-        desiredCenters(positioned, byId, edges, rank, 'outgoing'),
+        desiredCenters(positioned, byId, edges, pinOffsets, rank, 'outgoing'),
       );
     }
   }
+
+  normalizeAutoLayoutTop(positioned, overrides);
 
   for (const node of positioned) {
     const override = overrides[node.id];
@@ -968,6 +991,10 @@ function estimateNodeHeight(node: NodeGraphNode): number {
   return 42 + Math.max(1, node.rowCount) * 30 + 10;
 }
 
+function nodeRowOffset(index: number): number {
+  return 42 + index * 30 + 15;
+}
+
 function estimatedNodeWidth(node: NodeGraphNode): number {
   if (node.kind === 'user-patch') return 240;
   if (node.kind === 'output') return 320;
@@ -984,19 +1011,36 @@ function packRank(nodes: PositionedNode[], desiredCentersById: Map<string, numbe
     return a.naturalOrder - b.naturalOrder;
   });
 
-  let cursor = 72;
+  let cursor = NODE_GRAPH_TOP;
   for (const node of sorted) {
     const desired = desiredCentersById.get(node.id);
     const targetTop = desired === undefined ? cursor : desired - node.height / 2;
     node.y = Math.max(cursor, targetTop);
-    cursor = node.y + node.height + 36;
+    cursor = node.y + node.height + NODE_GRAPH_GAP;
+  }
+}
+
+function normalizeAutoLayoutTop(
+  nodes: PositionedNode[],
+  overrides: Record<string, NodePoint>,
+): void {
+  const automaticNodes = nodes.filter((node) => !(node.id in overrides));
+  if (automaticNodes.length === 0) return;
+
+  const minY = Math.min(...automaticNodes.map((node) => node.y));
+  const delta = minY - NODE_GRAPH_TOP;
+  if (delta <= 0) return;
+
+  for (const node of automaticNodes) {
+    node.y -= delta;
   }
 }
 
 function desiredCenters(
   nodes: PositionedNode[],
   byId: Map<string, PositionedNode>,
-  edges: Array<{ from: string; to: string }>,
+  edges: Array<{ from: string; to: string; fromPin: string; toPin: string }>,
+  pinOffsets: Map<string, number>,
   rank: number,
   direction: 'incoming' | 'outgoing',
 ): Map<string, number> {
@@ -1007,10 +1051,17 @@ function desiredCenters(
     const nodeId = direction === 'incoming' ? edge.to : edge.from;
     const neighborId = direction === 'incoming' ? edge.from : edge.to;
     if (!rankNodeIds.has(nodeId)) continue;
+    const node = byId.get(nodeId);
     const neighbor = byId.get(neighborId);
-    if (!neighbor) continue;
+    if (!node || !neighbor) continue;
+
+    const ownPin = direction === 'incoming' ? edge.toPin : edge.fromPin;
+    const neighborPin = direction === 'incoming' ? edge.fromPin : edge.toPin;
+    const ownOffset = pinOffsets.get(ownPin) ?? node.height / 2;
+    const neighborOffset = pinOffsets.get(neighborPin) ?? neighbor.height / 2;
+    const desiredTop = neighbor.y + neighborOffset - ownOffset;
     (centers.get(nodeId) ?? centers.set(nodeId, []).get(nodeId)!).push(
-      neighbor.y + neighbor.height / 2,
+      desiredTop + node.height / 2,
     );
   }
 
