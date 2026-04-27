@@ -28,6 +28,46 @@ import {
 
 export type RoutingVisualMode = 'patchbay' | 'nodes';
 
+type NodeGraphKind = 'source' | 'processor' | 'output' | 'user-patch';
+
+interface NodePoint {
+  x: number;
+  y: number;
+}
+
+interface NodeGraphNode {
+  id: string;
+  kind: NodeGraphKind;
+  title: string;
+  badge: string;
+  rank: number;
+  naturalOrder: number;
+  rowCount: number;
+  endpoints?: RoutingEndpoint[];
+  slots?: UserRouteSlot[];
+}
+
+interface PositionedNode extends NodeGraphNode {
+  x: number;
+  y: number;
+  height: number;
+}
+
+interface NodeGraphLayout {
+  nodes: PositionedNode[];
+  lanes: Array<{ label: string; rank: number; x: number }>;
+  width: number;
+  height: number;
+}
+
+interface NodeDragState {
+  id: string;
+  startPointerX: number;
+  startPointerY: number;
+  startX: number;
+  startY: number;
+}
+
 @customElement('x32-routing-visualizer')
 export class RoutingVisualizer extends LitElement {
   protected override createRenderRoot(): HTMLElement {
@@ -45,10 +85,12 @@ export class RoutingVisualizer extends LitElement {
   @state() private previewConnection: string | null = null;
   @state() private lockedConnection: string | null = null;
   @state() private includeHidden = false;
+  @state() private nodeOverrides: Record<string, NodePoint> = {};
 
   private model: RoutingVisualModel | null = null;
 
   private frame = 0;
+  private dragState: NodeDragState | null = null;
   private onWindowResize = () => this.scheduleDraw();
 
   override willUpdate(): void {
@@ -68,6 +110,8 @@ export class RoutingVisualizer extends LitElement {
 
   override disconnectedCallback(): void {
     window.removeEventListener('resize', this.onWindowResize);
+    window.removeEventListener('pointermove', this.onNodeDragMove);
+    window.removeEventListener('pointerup', this.onNodeDragEnd);
     cancelAnimationFrame(this.frame);
     super.disconnectedCallback();
   }
@@ -142,6 +186,7 @@ export class RoutingVisualizer extends LitElement {
   }
 
   private renderNodeGraph(model: RoutingVisualModel) {
+    const layout = buildNodeGraphLayout(model, this.nodeOverrides);
     return html`
       <section
         class=${classMap({
@@ -167,28 +212,26 @@ export class RoutingVisualizer extends LitElement {
         </header>
 
         <main class="rv-node-canvas">
-          <div class="rv-node-stage rv-wire-stage" @click=${this.clearLockedHighlight}>
+          <div
+            class="rv-node-stage rv-wire-stage"
+            style=${`width: ${layout.width}px; height: ${layout.height}px;`}
+            @click=${this.clearLockedHighlight}
+          >
             <svg class="routing-wires" aria-hidden="true"></svg>
-            <div class="rv-node-column">
-              <div class="rv-lane-label">Sources</div>
-              ${this.renderNodeGroups(model.sources, 'source')}
-            </div>
-            <div class="rv-node-column rv-node-user">
-              <div class="rv-lane-label user">User Patch · IN</div>
-              ${this.renderUserNode('User Patch · IN', model.userInputs, model.stats.activeUserInputs, 32)}
-            </div>
-            <div class="rv-node-column rv-node-processors">
-              <div class="rv-lane-label">Channels & Buses</div>
-              ${this.renderNodeGroups(model.processors, 'processor')}
-            </div>
-            <div class="rv-node-column rv-node-user">
-              <div class="rv-lane-label user">User Patch · OUT</div>
-              ${this.renderUserNode('User Patch · OUT', model.userOutputs, model.stats.activeUserOutputs, 48)}
-            </div>
-            <div class="rv-node-column">
-              <div class="rv-lane-label">Outputs</div>
-              ${this.renderNodeGroups(model.outputs, 'output')}
-            </div>
+            ${layout.lanes.map(
+              (lane) => html`
+                <div
+                  class=${classMap({
+                    'rv-lane-label': true,
+                    user: lane.label.includes('User Patch'),
+                  })}
+                  style=${`left: ${lane.x}px; top: 24px;`}
+                >
+                  ${lane.label}
+                </div>
+              `,
+            )}
+            ${layout.nodes.map((node) => this.renderNodeGraphNode(node))}
           </div>
         </main>
       </section>
@@ -367,27 +410,37 @@ export class RoutingVisualizer extends LitElement {
     `;
   }
 
-  private renderNodeGroups(
-    endpoints: RoutingEndpoint[],
-    kind: 'source' | 'processor' | 'output',
-  ) {
-    return groupBy(endpoints, (endpoint) => endpoint.group).map(
-      ([group, items]) => html`
-        <section class="rv-node" data-kind=${kind}>
-          <header class="rv-node-head">
-            <span
-              class="rv-node-dot"
-              style=${styleMap({ '--rv-accent': items[0]?.color ?? '#94a3b8' })}
-            ></span>
-            ${group}
-            <span class="rv-node-badge">${items.length}</span>
-          </header>
-          <div class="rv-node-body">
-            ${items.map((endpoint) => this.renderNodePinRow(endpoint, kind))}
-          </div>
-        </section>
-      `,
-    );
+  private renderNodeGraphNode(node: PositionedNode) {
+    const accent =
+      node.endpoints?.[0]?.color ?? node.slots?.find((slot) => slot.active)?.color ?? '#94a3b8';
+    return html`
+      <section
+        class=${classMap({
+          'rv-node': true,
+          'rv-user-node': node.kind === 'user-patch',
+          dragging: this.dragState?.id === node.id,
+        })}
+        data-kind=${node.kind}
+        data-node-id=${node.id}
+        style=${`left: ${node.x}px; top: ${node.y}px; --rv-accent: ${accent};`}
+      >
+        <header
+          class="rv-node-head"
+          @pointerdown=${(event: PointerEvent) =>
+            this.startNodeDrag(event, node.id, { x: node.x, y: node.y })}
+        >
+          <span class="rv-node-dot"></span>
+          ${node.title}
+          <span class="rv-node-badge">${node.badge}</span>
+        </header>
+        <div class="rv-node-body">
+          ${node.endpoints?.map((endpoint) =>
+            this.renderNodePinRow(endpoint, nodeEndpointKind(node.kind)),
+          )}
+          ${node.slots?.map((slot) => this.renderUserNodeRow(slot))}
+        </div>
+      </section>
+    `;
   }
 
   private renderNodePinRow(
@@ -455,26 +508,6 @@ export class RoutingVisualizer extends LitElement {
         ${label}
         <span class="rv-node-pin out lit" data-pin=${processorOutPin(endpoint.key)}></span>
       </div>
-    `;
-  }
-
-  private renderUserNode(
-    title: string,
-    slots: UserRouteSlot[],
-    active: number,
-    total: number,
-  ) {
-    return html`
-      <section class="rv-node rv-user-node" data-kind="user-patch">
-        <header class="rv-node-head">
-          <span class="rv-node-dot"></span>
-          ${title}
-          <span class="rv-node-badge">${active}/${total}</span>
-        </header>
-        <div class="rv-node-body">
-          ${slots.map((slot) => this.renderUserNodeRow(slot))}
-        </div>
-      </section>
     `;
   }
 
@@ -606,6 +639,47 @@ export class RoutingVisualizer extends LitElement {
     this.lockedConnection = null;
   };
 
+  private startNodeDrag(
+    event: PointerEvent,
+    id: string,
+    currentPosition: NodePoint,
+  ): void {
+    if (event.button !== 0) return;
+    event.stopPropagation();
+    this.dragState = {
+      id,
+      startPointerX: event.clientX,
+      startPointerY: event.clientY,
+      startX: currentPosition.x,
+      startY: currentPosition.y,
+    };
+    window.addEventListener('pointermove', this.onNodeDragMove);
+    window.addEventListener('pointerup', this.onNodeDragEnd);
+  }
+
+  private onNodeDragMove = (event: PointerEvent): void => {
+    if (!this.dragState) return;
+    const x = Math.max(
+      16,
+      this.dragState.startX + event.clientX - this.dragState.startPointerX,
+    );
+    const y = Math.max(
+      56,
+      this.dragState.startY + event.clientY - this.dragState.startPointerY,
+    );
+    this.nodeOverrides = {
+      ...this.nodeOverrides,
+      [this.dragState.id]: { x, y },
+    };
+    this.scheduleDraw();
+  };
+
+  private onNodeDragEnd = (): void => {
+    this.dragState = null;
+    window.removeEventListener('pointermove', this.onNodeDragMove);
+    window.removeEventListener('pointerup', this.onNodeDragEnd);
+  };
+
   private onIncludeHiddenChange = (event: Event): void => {
     this.includeHidden = (event.target as HTMLInputElement).checked;
     this.clearPreviewHighlight();
@@ -682,6 +756,13 @@ function endpointPins(
   return [processorInPin(key), processorOutPin(key)];
 }
 
+function nodeEndpointKind(
+  kind: NodeGraphKind,
+): 'source' | 'processor' | 'output' {
+  if (kind === 'source' || kind === 'output') return kind;
+  return 'processor';
+}
+
 function connectionKey(connection: RoutingConnection): string {
   return `${connection.fromPin}->${connection.toPin}`;
 }
@@ -705,6 +786,240 @@ function applyWireHighlight(
 
 function samePins(a: string[], b: string[]): boolean {
   return a.length === b.length && a.every((pin, index) => pin === b[index]);
+}
+
+function buildNodeGraphLayout(
+  model: RoutingVisualModel,
+  overrides: Record<string, NodePoint>,
+): NodeGraphLayout {
+  const nodes: NodeGraphNode[] = [];
+  const pinToNode = new Map<string, string>();
+  let order = 0;
+
+  for (const [group, endpoints] of groupBy(model.sources, (endpoint) => endpoint.group)) {
+    const id = `source:${group}`;
+    nodes.push({
+      id,
+      kind: 'source',
+      title: group,
+      badge: String(endpoints.length),
+      rank: 0,
+      naturalOrder: order++,
+      rowCount: endpoints.length,
+      endpoints,
+    });
+    for (const endpoint of endpoints) pinToNode.set(sourceOutPin(endpoint.key), id);
+  }
+
+  if (model.userInputs.length > 0) {
+    const id = 'user-in';
+    nodes.push({
+      id,
+      kind: 'user-patch',
+      title: 'User Patch · IN',
+      badge: `${model.stats.activeUserInputs}/32`,
+      rank: 1,
+      naturalOrder: order++,
+      rowCount: model.userInputs.length,
+      slots: model.userInputs,
+    });
+    for (const slot of model.userInputs) {
+      pinToNode.set(userInPin(slot.key), id);
+      pinToNode.set(userOutPin(slot.key), id);
+    }
+  }
+
+  for (const [group, endpoints] of groupBy(model.processors, (endpoint) => endpoint.group)) {
+    const id = `processor:${group}`;
+    nodes.push({
+      id,
+      kind: 'processor',
+      title: group,
+      badge: String(endpoints.length),
+      rank: group === 'Out 1-16' ? 3 : 2,
+      naturalOrder: order++,
+      rowCount: endpoints.length,
+      endpoints,
+    });
+    for (const endpoint of endpoints) {
+      pinToNode.set(processorInPin(endpoint.key), id);
+      pinToNode.set(processorOutPin(endpoint.key), id);
+    }
+  }
+
+  if (model.userOutputs.length > 0) {
+    const id = 'user-out';
+    nodes.push({
+      id,
+      kind: 'user-patch',
+      title: 'User Patch · OUT',
+      badge: `${model.stats.activeUserOutputs}/48`,
+      rank: 4,
+      naturalOrder: order++,
+      rowCount: model.userOutputs.length,
+      slots: model.userOutputs,
+    });
+    for (const slot of model.userOutputs) {
+      pinToNode.set(userInPin(slot.key), id);
+      pinToNode.set(userOutPin(slot.key), id);
+    }
+  }
+
+  for (const [group, endpoints] of groupBy(model.outputs, (endpoint) => endpoint.group)) {
+    const id = `output:${group}`;
+    nodes.push({
+      id,
+      kind: 'output',
+      title: group,
+      badge: String(endpoints.length),
+      rank: 5,
+      naturalOrder: order++,
+      rowCount: endpoints.length,
+      endpoints,
+    });
+    for (const endpoint of endpoints) pinToNode.set(outputInPin(endpoint.key), id);
+  }
+
+  const positioned: PositionedNode[] = nodes.map((node) => ({
+    ...node,
+    x: rankX(node.rank),
+    y: 72,
+    height: estimateNodeHeight(node),
+  }));
+  if (positioned.length === 0) {
+    return { nodes: [], lanes: [], width: 1200, height: 720 };
+  }
+  const byId = new Map(positioned.map((node) => [node.id, node]));
+  const edges = model.connections
+    .map((connection) => ({
+      from: pinToNode.get(connection.fromPin),
+      to: pinToNode.get(connection.toPin),
+    }))
+    .filter((edge): edge is { from: string; to: string } =>
+      Boolean(edge.from && edge.to && edge.from !== edge.to),
+    );
+
+  for (const rank of uniqueRanks(positioned)) {
+    packRank(
+      positioned.filter((node) => node.rank === rank),
+      new Map(),
+    );
+  }
+
+  for (let pass = 0; pass < 5; pass += 1) {
+    for (const rank of uniqueRanks(positioned).slice(1)) {
+      packRank(
+        positioned.filter((node) => node.rank === rank),
+        desiredCenters(positioned, byId, edges, rank, 'incoming'),
+      );
+    }
+    for (const rank of uniqueRanks(positioned).slice(0, -1).reverse()) {
+      packRank(
+        positioned.filter((node) => node.rank === rank),
+        desiredCenters(positioned, byId, edges, rank, 'outgoing'),
+      );
+    }
+  }
+
+  for (const node of positioned) {
+    const override = overrides[node.id];
+    if (!override) continue;
+    node.x = override.x;
+    node.y = override.y;
+  }
+
+  const lanes = uniqueRanks(positioned).map((rank) => ({
+    rank,
+    x: rankX(rank),
+    label: laneLabel(rank),
+  }));
+  const width = Math.max(
+    1200,
+    ...positioned.map((node) => node.x + estimatedNodeWidth(node) + 96),
+  );
+  const height = Math.max(
+    720,
+    ...positioned.map((node) => node.y + node.height + 96),
+  );
+
+  return { nodes: positioned, lanes, width, height };
+}
+
+function uniqueRanks(nodes: Array<{ rank: number }>): number[] {
+  return [...new Set(nodes.map((node) => node.rank))].sort((a, b) => a - b);
+}
+
+function rankX(rank: number): number {
+  return [48, 390, 700, 1040, 1360, 1680][rank] ?? 48 + rank * 320;
+}
+
+function laneLabel(rank: number): string {
+  return [
+    'Sources',
+    'User Patch · IN',
+    'Channels & Buses',
+    'Out 1-16',
+    'User Patch · OUT',
+    'Outputs',
+  ][rank] ?? 'Nodes';
+}
+
+function estimateNodeHeight(node: NodeGraphNode): number {
+  return 42 + Math.max(1, node.rowCount) * 30 + 10;
+}
+
+function estimatedNodeWidth(node: NodeGraphNode): number {
+  if (node.kind === 'user-patch') return 240;
+  if (node.kind === 'output') return 320;
+  return 280;
+}
+
+function packRank(nodes: PositionedNode[], desiredCentersById: Map<string, number>): void {
+  const sorted = [...nodes].sort((a, b) => {
+    const desiredA = desiredCentersById.get(a.id);
+    const desiredB = desiredCentersById.get(b.id);
+    if (desiredA !== undefined && desiredB !== undefined) return desiredA - desiredB;
+    if (desiredA !== undefined) return -1;
+    if (desiredB !== undefined) return 1;
+    return a.naturalOrder - b.naturalOrder;
+  });
+
+  let cursor = 72;
+  for (const node of sorted) {
+    const desired = desiredCentersById.get(node.id);
+    const targetTop = desired === undefined ? cursor : desired - node.height / 2;
+    node.y = Math.max(cursor, targetTop);
+    cursor = node.y + node.height + 36;
+  }
+}
+
+function desiredCenters(
+  nodes: PositionedNode[],
+  byId: Map<string, PositionedNode>,
+  edges: Array<{ from: string; to: string }>,
+  rank: number,
+  direction: 'incoming' | 'outgoing',
+): Map<string, number> {
+  const centers = new Map<string, number[]>();
+  const rankNodeIds = new Set(nodes.filter((node) => node.rank === rank).map((node) => node.id));
+
+  for (const edge of edges) {
+    const nodeId = direction === 'incoming' ? edge.to : edge.from;
+    const neighborId = direction === 'incoming' ? edge.from : edge.to;
+    if (!rankNodeIds.has(nodeId)) continue;
+    const neighbor = byId.get(neighborId);
+    if (!neighbor) continue;
+    (centers.get(nodeId) ?? centers.set(nodeId, []).get(nodeId)!).push(
+      neighbor.y + neighbor.height / 2,
+    );
+  }
+
+  return new Map(
+    [...centers.entries()].map(([id, values]) => [
+      id,
+      values.reduce((sum, value) => sum + value, 0) / values.length,
+    ]),
+  );
 }
 
 function colorLabel(color: string): string {
