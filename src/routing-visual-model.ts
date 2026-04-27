@@ -8,6 +8,7 @@ import type { ScnParser } from './parser/scn-parser.js';
 import type { Channel, P16OutputRow } from './parser/types.js';
 
 const PAD = (value: number | string): string => String(value).padStart(2, '0');
+const OUTPUT_TAP_RE = /^out\.([0-9]{2})$/;
 
 const CHANNEL_COLOR: Record<string, string> = {
   RD: '#ef4444',
@@ -43,6 +44,7 @@ const TYPE_ORDER = new Map(
     'bus',
     'main',
     'mtx',
+    'out-tap',
     'fx',
     'tb',
     'mon',
@@ -121,6 +123,7 @@ export function buildRoutingVisualModel(
   const userInputColors = new Map<string, string>();
   const userOutputColors = new Map<string, string>();
   const connections: RoutingConnection[] = [];
+  const outputTaps = collectOutputTaps(parser, visibilityContext);
 
   for (const [channelKey, channel] of Object.entries(parser.channels)) {
     if (!channel.route_key) continue;
@@ -155,6 +158,32 @@ export function buildRoutingVisualModel(
         kind: 'bypass',
       });
     }
+  }
+
+  for (const tapSourceKey of outputTaps) {
+    if (!isProcessorVisible(visibilityContext, outputTapKey(tapSourceKey))) {
+      continue;
+    }
+    const tapSource = parser.outputs[tapSourceKey];
+    if (!tapSource) continue;
+
+    const producer = resolveProducer(
+      parser,
+      tapSource,
+      sourceKeys,
+      processorKeys,
+      visibilityContext,
+    );
+    if (!producer) continue;
+
+    const color = outputTapColor(parser, tapSourceKey, producer.color);
+    processorKeys.set(outputTapKey(tapSourceKey), color);
+    connections.push({
+      fromPin: producerPin(producer),
+      toPin: processorInPin(outputTapKey(tapSourceKey)),
+      color,
+      kind: 'normal',
+    });
   }
 
   for (const outputType of OUTPUT_TABLE_TYPES) {
@@ -280,6 +309,27 @@ function rawOutputSource(
   return parser.outputRouteSource[outputKey] ?? null;
 }
 
+function collectOutputTaps(
+  parser: ScnParser,
+  visibility: VisibilityContext,
+): Set<string> {
+  const taps = new Set<string>();
+  if (visibility.includeHidden) {
+    for (const key of Object.keys(parser.outputs)) {
+      if (isOutputTap(key)) taps.add(key);
+    }
+    return taps;
+  }
+
+  for (const outputKey of visibility.visibleOutputs) {
+    const [outputType] = outputKey.split('.');
+    const source = rawOutputSource(parser, outputType, outputKey);
+    if (source && isOutputTap(source)) taps.add(source);
+  }
+
+  return taps;
+}
+
 function outputRowChannel(
   row: Channel | P16OutputRow | null,
 ): Channel | null {
@@ -295,6 +345,14 @@ function resolveProducer(
 ): Producer | null {
   const linkedSource = rawSource in parser.outputs ? parser.outputs[rawSource] : rawSource;
   if (!linkedSource) return null;
+
+  if (isOutputTap(rawSource)) {
+    const key = outputTapKey(rawSource);
+    if (!isProcessorVisible(visibility, key)) return null;
+    const color = outputTapColor(parser, rawSource);
+    processorKeys.set(key, color);
+    return { kind: 'processor', key, color };
+  }
 
   const directChannel = parser.channels[linkedSource];
   if (directChannel) {
@@ -347,6 +405,17 @@ function colorForChannel(channel: Channel): string {
   return CHANNEL_COLOR[channel.color ?? 'OFF'] ?? '#64748b';
 }
 
+function outputTapColor(
+  parser: ScnParser,
+  sourceKey: string,
+  fallback = '#64748b',
+): string {
+  const source = parser.outputs[sourceKey];
+  if (!source) return fallback;
+  const channel = parser.channels[source];
+  return channel ? colorForChannel(channel) : fallback;
+}
+
 function sourceEndpoint(key: string, color: string): RoutingEndpoint {
   const { label, name, group } = sourceParts(key);
   return {
@@ -366,6 +435,23 @@ function processorEndpoint(
   key: string,
   color: string,
 ): RoutingEndpoint {
+  if (isOutputTapKey(key)) {
+    const sourceKey = outputTapSourceKey(key);
+    const source = sourceKey ? parser.outputs[sourceKey] : null;
+    const sourceChannel = source ? parser.channels[source] : undefined;
+    const [, index = ''] = key.split('.');
+    return {
+      id: `proc:${key}`,
+      key,
+      label: `Out ${index}`,
+      name: sourceChannel?.name ?? sourceParts(source ?? '').label,
+      meta: source ?? key,
+      group: 'Out 1-16',
+      color,
+      active: true,
+    };
+  }
+
   const channel = parser.channels[key];
   const deskName = getDeskName(channel);
   const name = channel?.name ?? '';
@@ -485,6 +571,7 @@ function sourceResult(
 
 function processorGroup(key: string): string {
   const [type] = key.split('.');
+  if (type === 'out-tap') return 'Out 1-16';
   if (type === 'in') return 'Input Channels';
   if (type === 'auxin') return 'Aux Input Channels';
   if (type === 'bus') return 'Buses';
@@ -592,6 +679,12 @@ function addVisibleOutputProducer(
   rawSource: string | null,
 ): void {
   if (!rawSource) return;
+  if (isOutputTap(rawSource)) {
+    context.visibleProcessors.add(outputTapKey(rawSource));
+    addVisibleOutputProducer(parser, context, parser.outputs[rawSource] ?? null);
+    return;
+  }
+
   const linkedSource = rawSource in parser.outputs ? parser.outputs[rawSource] : rawSource;
   if (!linkedSource) return;
 
@@ -621,4 +714,22 @@ function isProcessorVisible(context: VisibilityContext, key: string): boolean {
 
 function isOutputVisible(context: VisibilityContext, key: string): boolean {
   return context.includeHidden || context.visibleOutputs.has(key);
+}
+
+function isOutputTap(key: string): boolean {
+  return OUTPUT_TAP_RE.test(key);
+}
+
+function outputTapKey(sourceKey: string): string {
+  const match = sourceKey.match(OUTPUT_TAP_RE);
+  return match ? `out-tap.${match[1]}` : sourceKey;
+}
+
+function isOutputTapKey(key: string): boolean {
+  return key.startsWith('out-tap.');
+}
+
+function outputTapSourceKey(key: string): string | null {
+  const [, index] = key.split('.');
+  return index ? `out.${index}` : null;
 }

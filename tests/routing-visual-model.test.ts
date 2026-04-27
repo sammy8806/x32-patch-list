@@ -41,7 +41,11 @@ describe('routing visual model', () => {
     expect(model.outputs.map((output) => output.key)).toContain('out.01');
     expect(connectionKeys).toContain('src:aes50a.01:out->user:user-in.01:in');
     expect(connectionKeys).toContain('user:user-in.01:out->proc:in.01:in');
-    expect(connectionKeys).toContain('proc:bus.01:out->user:user-out.01:in');
+    expect(model.processors.map((processor) => processor.key)).toContain(
+      'out-tap.01',
+    );
+    expect(connectionKeys).toContain('proc:bus.01:out->proc:out-tap.01:in');
+    expect(connectionKeys).toContain('proc:out-tap.01:out->user:user-out.01:in');
     expect(connectionKeys).toContain('user:user-out.01:out->out:out.01:in');
   });
 
@@ -85,6 +89,9 @@ describe('routing visual model', () => {
 
     expect(full.sources.map((source) => source.key)).toContain('aes50a.01');
     expect(full.processors.map((processor) => processor.key)).toContain('in.01');
+    expect(full.processors.map((processor) => processor.key)).toContain(
+      'out-tap.01',
+    );
     expect(full.outputs.map((output) => output.key)).toContain('out.01');
     expect(full.stats.activeUserInputs).toBe(1);
     expect(full.userInputs.length).toBeGreaterThan(1);
