@@ -36,7 +36,7 @@ Requires [Bun](https://bun.com) ≥ 1.3.
 bun install
 bun test           # parser + integration tests
 bun run typecheck  # tsc --noEmit
-bun run dev        # http://localhost:5173
+bun run dev        # http://localhost:8732
 bun run build      # → dist/
 ```
 

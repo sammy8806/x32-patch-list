@@ -1,0 +1,13 @@
+{
+  "processes": {
+    "web": {
+      "projectName": "x32-patch-list",
+      "componentName": "web",
+      "pid": 10871,
+      "startedAt": "2026-04-27T21:24:32.364Z",
+      "startCommand": "bun run dev",
+      "workDir": "/Users/steven/work/x32-patch-list",
+      "logFile": "/Users/steven/work/x32-patch-list/.service-starter/logs/web.log"
+    }
+  }
+}

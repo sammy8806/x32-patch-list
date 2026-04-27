@@ -1,0 +1,8 @@
+name: x32-patch-list
+components:
+  web:
+    codeDir: ./src
+    startCommand: bun run dev
+    ports:
+      - port: 8732
+        label: Bun Dev Server

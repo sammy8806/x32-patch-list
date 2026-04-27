@@ -18,7 +18,7 @@ import { existsSync, statSync, watch } from 'node:fs';
 const ROOT = resolve(import.meta.dir);
 const SRC = join(ROOT, 'src');
 const OUT = join(ROOT, '.dev-dist');
-const PORT = Number(process.env.PORT ?? 5173);
+const PORT = Number(process.env.PORT ?? 8732);
 
 const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
