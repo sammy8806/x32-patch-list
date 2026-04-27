@@ -9,11 +9,21 @@
  *   - Print
  *
  * Emits: `title-changed` (detail: string), `request-new-file`,
- * `request-comment-migration`, `export-json`, `print`.
+ * `view-changed` (detail: AppViewMode), `request-comment-migration`,
+ * `export-json`, `print`.
  */
 
 import { LitElement, html } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
+import { classMap } from 'lit/directives/class-map.js';
+
+import type { AppViewMode } from '../url-state.js';
+
+const VIEW_OPTIONS: Array<{ mode: AppViewMode; label: string }> = [
+  { mode: 'list', label: 'Patch List' },
+  { mode: 'patchbay', label: 'Patchbay' },
+  { mode: 'nodes', label: 'Node Graph' },
+];
 
 @customElement('x32-toolbar')
 export class Toolbar extends LitElement {
@@ -23,6 +33,7 @@ export class Toolbar extends LitElement {
 
   @property({ type: String }) filename = '';
   @property({ type: String }) override title = '';
+  @property({ type: String }) viewMode: AppViewMode = 'list';
 
   override render() {
     return html`
@@ -40,6 +51,20 @@ export class Toolbar extends LitElement {
           .value=${this.title}
           @input=${this.onTitleInput}
         />
+        <div class="view-switch" role="group" aria-label="View">
+          ${VIEW_OPTIONS.map(
+            (option) => html`
+              <button
+                type="button"
+                class=${classMap({ active: this.viewMode === option.mode })}
+                aria-pressed=${this.viewMode === option.mode}
+                @click=${() => this.emitView(option.mode)}
+              >
+                ${option.label}
+              </button>
+            `,
+          )}
+        </div>
         <button
           type="button"
           @click=${() => this.emit('request-comment-migration')}
@@ -70,6 +95,16 @@ export class Toolbar extends LitElement {
       }),
     );
   };
+
+  private emitView(mode: AppViewMode): void {
+    this.dispatchEvent(
+      new CustomEvent('view-changed', {
+        detail: mode,
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
 
   private emit(name: string): void {
     this.dispatchEvent(new CustomEvent(name, { bubbles: true, composed: true }));

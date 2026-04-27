@@ -65,7 +65,13 @@ async function buildApp(): Promise<{ jsPath: string; cssPath: string; assetUrls:
 
   // 2) Concatenate all stylesheets into one hashed file so index.html links
   //    exactly one CSS resource.
-  const cssOrder = ['base.css', 'web.css', 'shell.css', 'print.css'];
+  const cssOrder = [
+    'base.css',
+    'web.css',
+    'routing-views.css',
+    'shell.css',
+    'print.css',
+  ];
   const cssChunks = await Promise.all(
     cssOrder.map((name) => readFile(join(SRC, 'styles', name), 'utf8')),
   );

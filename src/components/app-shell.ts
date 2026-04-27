@@ -11,6 +11,7 @@ import { customElement, state } from 'lit/decorators.js';
 import './upload-view.js';
 import './toolbar.js';
 import './patch-list.js';
+import './routing-visualizer.js';
 import type {
   RecentSelectedDetail,
   SceneSelectedDetail,
@@ -32,8 +33,11 @@ import {
   type SessionState,
 } from '../storage.js';
 import {
+  nextHrefForViewMode,
   nextHrefForSession,
   readSessionIdFromHref,
+  readViewModeFromHref,
+  type AppViewMode,
 } from '../url-state.js';
 
 type RowTextFieldChange = {
@@ -54,6 +58,7 @@ export class AppShell extends LitElement {
   @state() private recentFilesList: RecentFile[] = [];
   @state() private commentMigrationSources: CommentMigrationSource[] = [];
   @state() private migrationNotice: string | null = null;
+  @state() private viewMode: AppViewMode = 'list';
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -62,6 +67,7 @@ export class AppShell extends LitElement {
     this.addEventListener('scene-selected', this.onSceneSelected as EventListener);
     this.addEventListener('recent-selected', this.onRecentSelected as EventListener);
     this.addEventListener('title-changed', this.onTitleChanged as EventListener);
+    this.addEventListener('view-changed', this.onViewChanged as EventListener);
     this.addEventListener('sheet-notes-changed', this.onSheetNotesChanged as EventListener);
     this.addEventListener('request-new-file', this.onRequestNewFile);
     this.addEventListener(
@@ -93,6 +99,7 @@ export class AppShell extends LitElement {
     this.removeEventListener('scene-selected', this.onSceneSelected as EventListener);
     this.removeEventListener('recent-selected', this.onRecentSelected as EventListener);
     this.removeEventListener('title-changed', this.onTitleChanged as EventListener);
+    this.removeEventListener('view-changed', this.onViewChanged as EventListener);
     this.removeEventListener(
       'sheet-notes-changed',
       this.onSheetNotesChanged as EventListener,
@@ -138,6 +145,7 @@ export class AppShell extends LitElement {
           <x32-toolbar
             .filename=${this.session.filename}
             .title=${this.session.title}
+            .viewMode=${this.viewMode}
           ></x32-toolbar>
           ${this.migrationNotice
             ? html`
@@ -151,16 +159,7 @@ export class AppShell extends LitElement {
             : nothing}
         </header>
         <main class="shell-main">
-          <x32-patch-list
-            .parser=${this.parser}
-            .title=${this.session.title}
-            .originalFileName=${this.session.filename}
-            .sheetNotes=${this.session.sheetNotes}
-            .rowText=${this.session.rowText}
-            .visibleRows=${this.session.visibleRows}
-            .visibleSections=${this.session.visibleSections}
-            .collapsedGaps=${this.session.collapsedGaps}
-          ></x32-patch-list>
+          ${this.renderActiveView()}
         </main>
         ${this.commentMigrationSources.length > 0
           ? this.renderCommentMigrationPicker()
@@ -206,6 +205,11 @@ export class AppShell extends LitElement {
     this.mutateSession((s) => {
       s.sheetNotes = e.detail;
     });
+  };
+
+  private onViewChanged = (e: CustomEvent<AppViewMode>) => {
+    this.viewMode = e.detail;
+    this.syncViewUrl(e.detail);
   };
 
   private onRequestNewFile = () => {
@@ -254,7 +258,9 @@ export class AppShell extends LitElement {
   };
 
   private onPrint = () => {
-    window.print();
+    this.viewMode = 'list';
+    this.syncViewUrl('list');
+    requestAnimationFrame(() => window.print());
   };
 
   private onRowTextChange = (e: CustomEvent<RowTextFieldChange>) => {
@@ -304,6 +310,7 @@ export class AppShell extends LitElement {
   };
 
   private onPopState = () => {
+    this.viewMode = readViewModeFromHref(window.location.href);
     const sessionId = this.urlSessionId();
     if (!sessionId) {
       this.resetActiveSession(false);
@@ -317,6 +324,7 @@ export class AppShell extends LitElement {
   // ---------------- Session loading ----------------
 
   private restoreInitialSession(): void {
+    this.viewMode = readViewModeFromHref(window.location.href);
     const hintedSessionId = this.urlSessionId();
     if (hintedSessionId && this.openStoredSession(hintedSessionId, false)) {
       return;
@@ -393,6 +401,14 @@ export class AppShell extends LitElement {
 
   private syncUrl(sessionId: string | null): void {
     const next = nextHrefForSession(window.location.href, sessionId);
+    const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    if (next !== current) {
+      window.history.replaceState(null, '', next);
+    }
+  }
+
+  private syncViewUrl(viewMode: AppViewMode): void {
+    const next = nextHrefForViewMode(window.location.href, viewMode);
     const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
     if (next !== current) {
       window.history.replaceState(null, '', next);
@@ -504,6 +520,32 @@ export class AppShell extends LitElement {
           </div>
         </section>
       </div>
+    `;
+  }
+
+  private renderActiveView() {
+    if (!this.parser || !this.session) return nothing;
+    if (this.viewMode === 'patchbay' || this.viewMode === 'nodes') {
+      return html`
+        <x32-routing-visualizer
+          .parser=${this.parser}
+          .mode=${this.viewMode === 'nodes' ? 'nodes' : 'patchbay'}
+          .filename=${this.session.filename}
+        ></x32-routing-visualizer>
+      `;
+    }
+
+    return html`
+      <x32-patch-list
+        .parser=${this.parser}
+        .title=${this.session.title}
+        .originalFileName=${this.session.filename}
+        .sheetNotes=${this.session.sheetNotes}
+        .rowText=${this.session.rowText}
+        .visibleRows=${this.session.visibleRows}
+        .visibleSections=${this.session.visibleSections}
+        .collapsedGaps=${this.session.collapsedGaps}
+      ></x32-patch-list>
     `;
   }
 

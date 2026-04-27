@@ -46,6 +46,28 @@
   flex: 1;
 }
 
+.view-switch {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-alt);
+}
+
+.view-switch button {
+  border: 0;
+  border-radius: calc(var(--radius) - 2px);
+  background: transparent;
+  padding: 0.32rem 0.62rem;
+  white-space: nowrap;
+}
+
+.view-switch button.active {
+  background: var(--text);
+  color: var(--surface);
+}
+
 .shell-toolbar .spacer {
   flex: 1;
 }
@@ -345,6 +367,15 @@
 
   .shell-toolbar input[name="title"] {
     width: 100%;
+  }
+
+  .view-switch {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .view-switch button {
+    flex: 1;
   }
 
   .shell-modal {

@@ -64,7 +64,13 @@ async function buildOnce(): Promise<void> {
   }
 
   // CSS: concatenate in deterministic order.
-  const order = ['base.css', 'web.css', 'shell.css', 'print.css'];
+  const order = [
+    'base.css',
+    'web.css',
+    'routing-views.css',
+    'shell.css',
+    'print.css',
+  ];
   const chunks = await Promise.all(
     order.map((n) => readFile(join(SRC, 'styles', n), 'utf8')),
   );

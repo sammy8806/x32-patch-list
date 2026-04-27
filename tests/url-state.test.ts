@@ -1,8 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 
 import {
+  nextHrefForViewMode,
   nextHrefForSession,
   readSessionIdFromHref,
+  readViewModeFromHref,
 } from '../src/url-state.js';
 
 describe('url-state', () => {
@@ -30,5 +32,31 @@ describe('url-state', () => {
         null,
       ),
     ).toBe('/patch-list?view=print#sheet');
+  });
+
+  test('reads supported view modes and falls back to the list', () => {
+    expect(readViewModeFromHref('https://example.test/?view=patchbay')).toBe(
+      'patchbay',
+    );
+    expect(readViewModeFromHref('https://example.test/?view=nodes')).toBe(
+      'nodes',
+    );
+    expect(readViewModeFromHref('https://example.test/?view=print')).toBe('list');
+  });
+
+  test('updates view mode without changing the file hint', () => {
+    expect(
+      nextHrefForViewMode(
+        'https://example.test/patch-list?file=festival.scn%7C42#sheet',
+        'nodes',
+      ),
+    ).toBe('/patch-list?file=festival.scn%7C42&view=nodes#sheet');
+
+    expect(
+      nextHrefForViewMode(
+        'https://example.test/patch-list?file=festival.scn%7C42&view=nodes#sheet',
+        'list',
+      ),
+    ).toBe('/patch-list?file=festival.scn%7C42#sheet');
   });
 });
