@@ -507,15 +507,17 @@
   display: flex;
   min-width: 0;
   flex-direction: column;
+  align-items: flex-start;
   gap: 1.5rem;
 }
 
 .rv-node-processors {
   display: grid;
-  grid-template-columns: repeat(2, minmax(13rem, 1fr));
+  grid-template-columns: repeat(2, max-content);
   column-gap: 3rem;
   row-gap: 1.5rem;
   align-content: start;
+  justify-content: start;
 }
 
 .rv-node-processors .rv-lane-label {
@@ -545,6 +547,9 @@
 .rv-node {
   position: relative;
   z-index: 2;
+  width: max-content;
+  min-width: 13rem;
+  max-width: 24rem;
   overflow: hidden;
   border: 1px solid var(--rv-node-edge);
   border-radius: 8px;
@@ -584,6 +589,7 @@
 }
 
 .rv-user-node {
+  width: 15rem;
   border-color: var(--rv-user);
   background:
     repeating-linear-gradient(180deg, #ffffff 0 26px, #f8fafc 26px 52px);
@@ -628,6 +634,7 @@
 }
 
 .rv-node-body {
+  width: 100%;
   padding: 4px 0 6px;
 }
 
@@ -635,6 +642,7 @@
   display: grid;
   align-items: center;
   gap: 6px;
+  width: 100%;
   min-height: 30px;
   padding: 5px 10px;
   transition:
@@ -692,7 +700,7 @@
 }
 
 .rv-node-label {
-  min-width: 0;
+  max-width: 18rem;
   overflow: hidden;
   color: var(--rv-text);
   font-size: 0.76rem;
