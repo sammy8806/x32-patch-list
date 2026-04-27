@@ -591,8 +591,7 @@
 .rv-user-node {
   width: 15rem;
   border-color: var(--rv-user);
-  background:
-    repeating-linear-gradient(180deg, #ffffff 0 26px, #f8fafc 26px 52px);
+  background: #ffffff;
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.6) inset,
     0 2px 4px rgba(0, 0, 0, 0.04),
@@ -667,9 +666,21 @@
   background: #fafafa;
 }
 
+.rv-user-node .rv-node-pin-row:nth-child(even) {
+  background: #f8fafc;
+}
+
+.rv-user-node .rv-node-pin-row:nth-child(odd) {
+  background: #ffffff;
+}
+
 .rv-node-pin-row.highlighted {
   background: color-mix(in oklab, var(--rv-accent) 12%, white);
   box-shadow: inset 3px 0 0 var(--rv-accent);
+}
+
+.rv-user-node .rv-node-pin-row.highlighted {
+  background: color-mix(in oklab, var(--rv-accent) 12%, white);
 }
 
 .rv-node-pin-row.unused {
