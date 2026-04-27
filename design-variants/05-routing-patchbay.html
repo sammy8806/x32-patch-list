@@ -15,10 +15,12 @@
         --bg: #0b0d10;
         --panel-edge: #2a2f37;
         --row-edge: #2a2f37;
+        --strip-edge: #1a1e24;
         --text: #e6e9ee;
         --muted: #8b94a3;
         --label: #c2c8d2;
         --jack-rim: #45505d;
+        --jack-rim-strip: #353c46;
         --jack-hole: #07090c;
         --c-red: #ef4444;
         --c-yellow: #eab308;
@@ -48,7 +50,7 @@
         display: flex; flex-direction: column; align-items: center;
       }
       header.page {
-        width: 100%; max-width: 1180px;
+        width: 100%; max-width: 1320px;
         display: flex; align-items: baseline; justify-content: space-between;
         margin-bottom: 1.25rem;
       }
@@ -65,10 +67,18 @@
         color: var(--muted);
       }
       .crumbs strong { color: var(--label); font-weight: 500; }
+      .crumbs .sep { opacity: 0.4; margin: 0 0.4rem; }
+      .crumbs .badge-uin {
+        display: inline-flex; align-items: center; gap: 0.3rem;
+        padding: 1px 6px; border-radius: 4px;
+        background: rgba(56, 189, 248, 0.12);
+        border: 1px solid rgba(56, 189, 248, 0.3);
+        color: #7dd3fc;
+      }
 
       .bay {
         position: relative;
-        width: 100%; max-width: 1180px;
+        width: 100%; max-width: 1320px;
         background: linear-gradient(180deg, #1a1e24 0%, #14171c 100%);
         border: 1px solid var(--panel-edge);
         border-radius: 14px;
@@ -94,8 +104,8 @@
 
       .columns {
         display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
-        gap: 6rem;
+        grid-template-columns: 1.05fr 0.55fr 0.95fr 0.55fr 1.05fr;
+        gap: 2.4rem;
         position: relative;
         z-index: 2;
       }
@@ -190,6 +200,67 @@
         font-size: 0.7rem;
         color: var(--label);
       }
+
+      /* User-routing strips (UIN / UOUT) — narrower, recessed, patchbay-style */
+      .col-user .h-wrap {
+        display: flex; align-items: baseline; justify-content: space-between;
+        margin: 0 0 0.75rem;
+      }
+      .col-user h2 { margin: 0; }
+      .col-user h2 small {
+        font-family: var(--font-mono); font-size: 0.6rem;
+        color: var(--muted); margin-left: 0.4rem; font-weight: 500;
+        letter-spacing: 0.1em;
+      }
+      .col-user .strip {
+        background: linear-gradient(180deg, #14171c 0%, #0e1115 100%);
+        border: 1px solid var(--strip-edge);
+        border-radius: 8px;
+        padding: 8px 6px;
+        box-shadow:
+          inset 0 2px 4px rgba(0,0,0,0.6),
+          inset 0 -1px 0 rgba(255,255,255,0.02);
+        position: relative;
+      }
+      .col-user .strip::before,
+      .col-user .strip::after {
+        content: '';
+        position: absolute;
+        width: 4px; height: 4px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 35% 35%, #4b5563, #1f2329 70%);
+      }
+      .col-user .strip::before { top: 6px; left: 6px; }
+      .col-user .strip::after  { bottom: 6px; right: 6px; }
+      .col-user .row {
+        grid-template-columns: 18px 1fr 18px;
+        height: 26px;
+        padding: 0 6px;
+        gap: 6px;
+        background: linear-gradient(180deg, #181c22 0%, #12151a 100%);
+        border-color: #232830;
+      }
+      .col-user .row .id {
+        text-align: center;
+        font-size: 0.66rem;
+        letter-spacing: 0.06em;
+        color: var(--muted);
+      }
+      .col-user .row.active .id { color: var(--label); font-weight: 600; }
+      .col-user .row.unused {
+        opacity: 0.35;
+      }
+      .col-user .row.unused .jack { border-color: #2a2f37; }
+      .col-user .jack-in { justify-self: start; }
+      .col-user .jack-out { justify-self: end; }
+
+      /* Inactive strip rows still show a pinhole, just no glow */
+      .col-user .row .jack {
+        width: 16px; height: 16px;
+        border-color: var(--jack-rim-strip);
+      }
+      .col-user .row .jack::after { inset: 4px; }
+
       svg.cables {
         position: absolute; inset: 0;
         width: 100%; height: 100%;
@@ -198,10 +269,18 @@
       }
       .cable {
         fill: none;
-        stroke-width: 2.5;
+        stroke-width: 2.2;
         stroke-linecap: round;
         opacity: 0.85;
         filter: drop-shadow(0 2px 1px rgba(0,0,0,0.6));
+      }
+      .cable.via-user {
+        stroke-dasharray: none;
+      }
+      .cable.bypass {
+        stroke-width: 1.7;
+        opacity: 0.55;
+        stroke-dasharray: 5 4;
       }
       footer.legend {
         margin-top: 0.85rem;
@@ -209,7 +288,7 @@
         font-size: 0.7rem;
         color: var(--muted);
         display: flex; gap: 1.25rem; flex-wrap: wrap;
-        width: 100%; max-width: 1180px;
+        width: 100%; max-width: 1320px;
         padding: 0 0.25rem;
       }
       footer.legend .swatch {
@@ -217,6 +296,10 @@
       }
       footer.legend .swatch .dot {
         width: 8px; height: 8px; border-radius: 50%;
+      }
+      footer.legend .swatch .glyph-bypass {
+        width: 18px; height: 2px; border-top: 2px dashed currentColor;
+        opacity: 0.6;
       }
       .scene-tag {
         display: inline-flex; align-items: center; gap: 0.4rem;
@@ -239,7 +322,15 @@
         <span class="scene-tag">festival-mainstage.scn</span>
       </h1>
       <div class="crumbs">
-        <strong>Inputs</strong> → Channels → <strong>Outputs</strong>
+        <strong>Inputs</strong>
+        <span class="sep">→</span>
+        <span class="badge-uin">UIN ×9</span>
+        <span class="sep">→</span>
+        Channels
+        <span class="sep">→</span>
+        <span class="badge-uin">UOUT ×4</span>
+        <span class="sep">→</span>
+        <strong>Outputs</strong>
       </div>
     </header>
 
@@ -247,9 +338,10 @@
       <span class="screw tl"></span><span class="screw tr"></span>
       <span class="screw bl"></span><span class="screw br"></span>
 
-      <svg class="cables" id="cables" viewBox="0 0 1180 720" preserveAspectRatio="none"></svg>
+      <svg class="cables" id="cables" viewBox="0 0 1320 820" preserveAspectRatio="none"></svg>
 
       <div class="columns">
+        <!-- ─────────── INPUTS ─────────── -->
         <div class="col col-input">
           <h2>Inputs <span class="count">10</span></h2>
           <div class="group">
@@ -304,7 +396,7 @@
             </div>
           </div>
           <div class="group">
-            <div class="group-name">Aux · rear panel</div>
+            <div class="group-name">Aux · rear panel <span style="color:#7dd3fc;opacity:0.6">· bypass UIN</span></div>
             <div class="row" data-out="src.auxin-01" style="--jack-glow: var(--c-white)">
               <span class="id">AUX 1</span>
               <span class="name">Click <span class="meta">click track</span></span>
@@ -313,6 +405,76 @@
           </div>
         </div>
 
+        <!-- ─────────── USER PATCH · IN ─────────── -->
+        <div class="col col-user col-userin">
+          <div class="h-wrap">
+            <h2>User In <small>UIN 1-12 of 32</small></h2>
+          </div>
+          <div class="strip">
+            <div class="row active" data-in="uin.01.in" data-out="uin.01.out" style="--jack-glow: var(--c-red)">
+              <span class="jack jack-in lit"></span>
+              <span class="id">U-01</span>
+              <span class="jack jack-out lit"></span>
+            </div>
+            <div class="row active" data-in="uin.02.in" data-out="uin.02.out" style="--jack-glow: var(--c-red)">
+              <span class="jack jack-in lit"></span>
+              <span class="id">U-02</span>
+              <span class="jack jack-out lit"></span>
+            </div>
+            <div class="row active" data-in="uin.03.in" data-out="uin.03.out" style="--jack-glow: var(--c-yellow)">
+              <span class="jack jack-in lit"></span>
+              <span class="id">U-03</span>
+              <span class="jack jack-out lit"></span>
+            </div>
+            <div class="row active" data-in="uin.04.in" data-out="uin.04.out" style="--jack-glow: var(--c-yellow)">
+              <span class="jack jack-in lit"></span>
+              <span class="id">U-04</span>
+              <span class="jack jack-out lit"></span>
+            </div>
+            <div class="row active" data-in="uin.05.in" data-out="uin.05.out" style="--jack-glow: var(--c-cyan)">
+              <span class="jack jack-in lit"></span>
+              <span class="id">U-05</span>
+              <span class="jack jack-out lit"></span>
+            </div>
+            <div class="row active" data-in="uin.06.in" data-out="uin.06.out" style="--jack-glow: var(--c-green)">
+              <span class="jack jack-in lit"></span>
+              <span class="id">U-06</span>
+              <span class="jack jack-out lit"></span>
+            </div>
+            <div class="row active" data-in="uin.07.in" data-out="uin.07.out" style="--jack-glow: var(--c-green)">
+              <span class="jack jack-in lit"></span>
+              <span class="id">U-07</span>
+              <span class="jack jack-out lit"></span>
+            </div>
+            <div class="row active" data-in="uin.08.in" data-out="uin.08.out" style="--jack-glow: var(--c-magenta)">
+              <span class="jack jack-in lit"></span>
+              <span class="id">U-08</span>
+              <span class="jack jack-out lit"></span>
+            </div>
+            <div class="row active" data-in="uin.09.in" data-out="uin.09.out" style="--jack-glow: var(--c-magenta)">
+              <span class="jack jack-in lit"></span>
+              <span class="id">U-09</span>
+              <span class="jack jack-out lit"></span>
+            </div>
+            <div class="row unused">
+              <span class="jack jack-in"></span>
+              <span class="id">U-10</span>
+              <span class="jack jack-out"></span>
+            </div>
+            <div class="row unused">
+              <span class="jack jack-in"></span>
+              <span class="id">U-11</span>
+              <span class="jack jack-out"></span>
+            </div>
+            <div class="row unused">
+              <span class="jack jack-in"></span>
+              <span class="id">U-12</span>
+              <span class="jack jack-out"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─────────── CHANNELS ─────────── -->
         <div class="col col-channel">
           <h2>Channels <span class="count">10</span></h2>
           <div class="group">
@@ -380,6 +542,76 @@
           </div>
         </div>
 
+        <!-- ─────────── USER PATCH · OUT ─────────── -->
+        <div class="col col-user col-userout">
+          <div class="h-wrap">
+            <h2>User Out <small>UOUT 1-12 of 32</small></h2>
+          </div>
+          <div class="strip">
+            <div class="row active" data-in="uout.01.in" data-out="uout.01.out" style="--jack-glow: var(--c-white)">
+              <span class="jack jack-in lit"></span>
+              <span class="id">U-01</span>
+              <span class="jack jack-out lit"></span>
+            </div>
+            <div class="row active" data-in="uout.02.in" data-out="uout.02.out" style="--jack-glow: var(--c-white)">
+              <span class="jack jack-in lit"></span>
+              <span class="id">U-02</span>
+              <span class="jack jack-out lit"></span>
+            </div>
+            <div class="row unused">
+              <span class="jack jack-in"></span>
+              <span class="id">U-03</span>
+              <span class="jack jack-out"></span>
+            </div>
+            <div class="row unused">
+              <span class="jack jack-in"></span>
+              <span class="id">U-04</span>
+              <span class="jack jack-out"></span>
+            </div>
+            <div class="row unused">
+              <span class="jack jack-in"></span>
+              <span class="id">U-05</span>
+              <span class="jack jack-out"></span>
+            </div>
+            <div class="row unused">
+              <span class="jack jack-in"></span>
+              <span class="id">U-06</span>
+              <span class="jack jack-out"></span>
+            </div>
+            <div class="row active" data-in="uout.07.in" data-out="uout.07.out" style="--jack-glow: var(--c-red)">
+              <span class="jack jack-in lit"></span>
+              <span class="id">U-07</span>
+              <span class="jack jack-out lit"></span>
+            </div>
+            <div class="row active" data-in="uout.08.in" data-out="uout.08.out" style="--jack-glow: var(--c-yellow)">
+              <span class="jack jack-in lit"></span>
+              <span class="id">U-08</span>
+              <span class="jack jack-out lit"></span>
+            </div>
+            <div class="row unused">
+              <span class="jack jack-in"></span>
+              <span class="id">U-09</span>
+              <span class="jack jack-out"></span>
+            </div>
+            <div class="row unused">
+              <span class="jack jack-in"></span>
+              <span class="id">U-10</span>
+              <span class="jack jack-out"></span>
+            </div>
+            <div class="row unused">
+              <span class="jack jack-in"></span>
+              <span class="id">U-11</span>
+              <span class="jack jack-out"></span>
+            </div>
+            <div class="row unused">
+              <span class="jack jack-in"></span>
+              <span class="id">U-12</span>
+              <span class="jack jack-out"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─────────── OUTPUTS ─────────── -->
         <div class="col col-output">
           <h2>Outputs <span class="count">8</span></h2>
           <div class="group">
@@ -406,7 +638,7 @@
             </div>
           </div>
           <div class="group">
-            <div class="group-name">P-16 · personal monitors</div>
+            <div class="group-name">P-16 · personal monitors <span style="color:#7dd3fc;opacity:0.6">· bypass UOUT</span></div>
             <div class="row" data-in="out.p16-01" style="--jack-glow: var(--c-red)">
               <span class="jack lit"></span>
               <span class="name">Lead Vox</span>
@@ -424,7 +656,7 @@
             </div>
           </div>
           <div class="group">
-            <div class="group-name">AES50-B · recording</div>
+            <div class="group-name">AES50-B · recording <span style="color:#7dd3fc;opacity:0.6">· bypass UOUT</span></div>
             <div class="row" data-in="out.aes50b-01" style="--jack-glow: var(--c-red)">
               <span class="jack lit"></span>
               <span class="name">Multitrack 01</span>
@@ -442,43 +674,77 @@
       <span class="swatch"><span class="dot" style="background: var(--c-green)"></span> Guitar</span>
       <span class="swatch"><span class="dot" style="background: var(--c-magenta)"></span> Keys</span>
       <span class="swatch"><span class="dot" style="background: var(--c-white)"></span> Click / Mains</span>
-      <span style="margin-left: auto">v5 · patchbay arrangement</span>
+      <span class="swatch"><span class="glyph-bypass"></span> bypasses user routing</span>
+      <span style="margin-left: auto">v5 · patchbay arrangement · UIN/UOUT inline strips</span>
     </footer>
 
     <script>
+      // [from-jack, to-jack, color, kind?]
+      // kind: 'via-user' (default solid) | 'bypass' (dashed thinner — no UIN/UOUT hop)
       const CONNECTIONS = [
-        ['src.local-01', 'ch.01.in', 'red'],
-        ['src.local-02', 'ch.02.in', 'red'],
-        ['src.local-03', 'ch.03.in', 'yellow'],
-        ['src.local-04', 'ch.04.in', 'yellow'],
-        ['src.aes50a-01', 'ch.05.in', 'cyan'],
-        ['src.aes50a-09', 'ch.06.in', 'green'],
-        ['src.aes50a-10', 'ch.07.in', 'green'],
-        ['src.aes50a-17', 'ch.08.in', 'magenta'],
-        ['src.aes50a-18', 'ch.09.in', 'magenta'],
-        ['src.auxin-01',  'aux.01.in', 'white'],
-        ['ch.01.out', 'out.p16-01', 'red'],
-        ['ch.01.out', 'out.aes50b-01', 'red'],
-        ['ch.03.out', 'out.p16-03', 'yellow'],
-        ['ch.05.out', 'out.p16-05', 'cyan'],
-        ['ch.01.out', 'out.xlr-07', 'red'],
-        ['ch.02.out', 'out.xlr-07', 'red'],
-        ['ch.03.out', 'out.xlr-08', 'yellow'],
-        ['ch.04.out', 'out.xlr-08', 'yellow'],
-        ['ch.01.out', 'out.xlr-01', 'white'],
-        ['ch.01.out', 'out.xlr-02', 'white'],
-        ['ch.05.out', 'out.xlr-01', 'white'],
-        ['ch.05.out', 'out.xlr-02', 'white'],
-        ['ch.06.out', 'out.xlr-01', 'white'],
-        ['ch.07.out', 'out.xlr-02', 'white'],
-        ['ch.08.out', 'out.xlr-01', 'white'],
-        ['ch.09.out', 'out.xlr-02', 'white'],
+        // ─── Sources → User-In ───
+        ['src.local-01', 'uin.01.in', 'red'],
+        ['src.local-02', 'uin.02.in', 'red'],
+        ['src.local-03', 'uin.03.in', 'yellow'],
+        ['src.local-04', 'uin.04.in', 'yellow'],
+        ['src.aes50a-01', 'uin.05.in', 'cyan'],
+        ['src.aes50a-09', 'uin.06.in', 'green'],
+        ['src.aes50a-10', 'uin.07.in', 'green'],
+        ['src.aes50a-17', 'uin.08.in', 'magenta'],
+        ['src.aes50a-18', 'uin.09.in', 'magenta'],
+        // Aux In → channel direct (bypasses UIN)
+        ['src.auxin-01', 'aux.01.in', 'white', 'bypass'],
+
+        // ─── User-In → Channels ───
+        ['uin.01.out', 'ch.01.in', 'red'],
+        ['uin.02.out', 'ch.02.in', 'red'],
+        ['uin.03.out', 'ch.03.in', 'yellow'],
+        ['uin.04.out', 'ch.04.in', 'yellow'],
+        ['uin.05.out', 'ch.05.in', 'cyan'],
+        ['uin.06.out', 'ch.06.in', 'green'],
+        ['uin.07.out', 'ch.07.in', 'green'],
+        ['uin.08.out', 'ch.08.in', 'magenta'],
+        ['uin.09.out', 'ch.09.in', 'magenta'],
+
+        // ─── Channels → User-Out (only for XLR mains/IEMs) ───
+        ['ch.01.out', 'uout.01.in', 'white'],
+        ['ch.02.out', 'uout.01.in', 'white'],
+        ['ch.05.out', 'uout.01.in', 'white'],
+        ['ch.06.out', 'uout.01.in', 'white'],
+        ['ch.08.out', 'uout.01.in', 'white'],
+        ['ch.01.out', 'uout.02.in', 'white'],
+        ['ch.02.out', 'uout.02.in', 'white'],
+        ['ch.05.out', 'uout.02.in', 'white'],
+        ['ch.07.out', 'uout.02.in', 'white'],
+        ['ch.09.out', 'uout.02.in', 'white'],
+        ['ch.01.out', 'uout.07.in', 'red'],
+        ['ch.02.out', 'uout.07.in', 'red'],
+        ['ch.03.out', 'uout.08.in', 'yellow'],
+        ['ch.04.out', 'uout.08.in', 'yellow'],
+
+        // ─── User-Out → Outputs ───
+        ['uout.01.out', 'out.xlr-01', 'white'],
+        ['uout.02.out', 'out.xlr-02', 'white'],
+        ['uout.07.out', 'out.xlr-07', 'red'],
+        ['uout.08.out', 'out.xlr-08', 'yellow'],
+
+        // ─── Channels → Outputs direct (bypasses UOUT) ───
+        ['ch.01.out', 'out.p16-01', 'red', 'bypass'],
+        ['ch.03.out', 'out.p16-03', 'yellow', 'bypass'],
+        ['ch.05.out', 'out.p16-05', 'cyan', 'bypass'],
+        ['ch.01.out', 'out.aes50b-01', 'red', 'bypass'],
       ];
 
       function jackCenter(row, side) {
         const containerR = document.querySelector('.bay').getBoundingClientRect();
-        const jacks = row.querySelectorAll('.jack');
-        const jack = side === 'in' ? jacks[0] : jacks[jacks.length - 1];
+        // For user-routing rows, there are exactly two jacks (in, out).
+        // For input/output/channel rows, the order is determined by DOM.
+        const jackIn = row.querySelector('.jack.jack-in') || row.querySelector('.jack');
+        const jackOut = row.querySelector('.jack.jack-out')
+          || (row.querySelectorAll('.jack').length > 1
+            ? row.querySelectorAll('.jack')[row.querySelectorAll('.jack').length - 1]
+            : row.querySelector('.jack'));
+        const jack = side === 'in' ? jackIn : jackOut;
         const jr = jack.getBoundingClientRect();
         return {
           x: jr.left - containerR.left + jr.width / 2,
@@ -497,18 +763,20 @@
         clearChildren(svg);
 
         const NS = 'http://www.w3.org/2000/svg';
-        for (const [fromId, toId, color] of CONNECTIONS) {
+        for (const [fromId, toId, color, kind] of CONNECTIONS) {
           const from = document.querySelector(`[data-out="${fromId}"]`);
           const to = document.querySelector(`[data-in="${toId}"]`);
           if (!from || !to) continue;
           const a = jackCenter(from, 'out');
           const b = jackCenter(to, 'in');
-          const dx = Math.max(60, (b.x - a.x) * 0.55);
-          const sag = Math.min(40, Math.abs(b.x - a.x) * 0.06);
+          const span = Math.abs(b.x - a.x);
+          // Tighter handles for short hops (within strip), wider for long spans
+          const dx = Math.max(40, span * 0.5);
+          const sag = Math.min(28, span * 0.04);
           const path = `M ${a.x} ${a.y} C ${a.x + dx} ${a.y + sag}, ${b.x - dx} ${b.y + sag}, ${b.x} ${b.y}`;
           const el = document.createElementNS(NS, 'path');
           el.setAttribute('d', path);
-          el.setAttribute('class', 'cable');
+          el.setAttribute('class', kind === 'bypass' ? 'cable bypass' : 'cable via-user');
           el.setAttribute('stroke', `var(--c-${color})`);
           svg.appendChild(el);
         }

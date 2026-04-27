@@ -27,6 +27,8 @@
         --row-hover: #fafafa;
         --pin-rim: #a1a1aa;
         --pin-fill: #ffffff;
+        --user-tint: #0284c7;
+        --user-tint-bg: #e0f2fe;
         --c-red: #ef4444;
         --c-yellow: #d97706;
         --c-green: #16a34a;
@@ -72,6 +74,12 @@
         color: var(--muted); margin-left: 0.5rem;
       }
       .crumbs strong { color: var(--label); font-weight: 500; }
+      .crumbs .u-pill {
+        display: inline-flex; align-items: center; gap: 0.25rem;
+        padding: 1px 6px; border-radius: 4px;
+        background: var(--user-tint-bg); color: var(--user-tint);
+        margin: 0 0.2rem;
+      }
       .toolbar {
         margin-left: auto;
         display: flex; gap: 0.4rem;
@@ -101,8 +109,8 @@
       }
       .stage {
         position: relative;
-        width: 1480px;
-        height: 920px;
+        width: 1820px;
+        height: 980px;
         margin: 1.5rem auto;
       }
       svg.wires {
@@ -116,6 +124,11 @@
         stroke-width: 2;
         opacity: 0.85;
         stroke-linecap: round;
+      }
+      .wire.bypass {
+        stroke-width: 1.5;
+        opacity: 0.55;
+        stroke-dasharray: 4 5;
       }
       .wire.thin {
         stroke-width: 1.5;
@@ -220,6 +233,72 @@
         background: #27272a; color: #a1a1aa; border-color: #3f3f46;
       }
 
+      /* User-routing patchbay — slim, neutral, distinct stripes */
+      .node[data-kind="user-patch"] {
+        width: 200px;
+        border-color: var(--user-tint);
+        background:
+          repeating-linear-gradient(
+            180deg,
+            #ffffff 0 26px,
+            #f8fafc 26px 52px
+          );
+        box-shadow:
+          var(--node-shadow),
+          0 0 0 4px color-mix(in oklab, var(--user-tint) 10%, transparent);
+      }
+      .node[data-kind="user-patch"] .node-head {
+        background: var(--user-tint-bg);
+        color: var(--user-tint);
+        border-bottom-color: color-mix(in oklab, var(--user-tint) 30%, white);
+      }
+      .node[data-kind="user-patch"] .node-head .badge {
+        background: #fff;
+        color: var(--user-tint);
+        border-color: color-mix(in oklab, var(--user-tint) 30%, white);
+      }
+      .node[data-kind="user-patch"] .pin-row {
+        grid-template-columns: 16px 1fr 16px;
+        padding: 3px 8px;
+        font-family: var(--font-mono);
+      }
+      .node[data-kind="user-patch"] .pin-row .label {
+        text-align: center;
+        font-size: 0.72rem;
+        letter-spacing: 0.04em;
+        color: var(--user-tint);
+        font-weight: 600;
+        position: relative;
+      }
+      .node[data-kind="user-patch"] .pin-row .label::before {
+        content: '';
+        position: absolute;
+        left: 14%; right: 14%; top: 50%;
+        border-top: 1px dotted color-mix(in oklab, var(--user-tint) 35%, white);
+        z-index: -1;
+      }
+      .node[data-kind="user-patch"] .pin-row .label .meta {
+        font-family: var(--font-sans);
+        font-weight: 500;
+        font-size: 0.66rem;
+        color: var(--muted);
+        margin-left: 0.4rem;
+      }
+      .node[data-kind="user-patch"] .pin-row.unused {
+        opacity: 0.42;
+      }
+      .node[data-kind="user-patch"] .pin-row.unused .label::before {
+        border-top-style: dotted;
+        border-top-color: #d4d4d8;
+      }
+      .node[data-kind="user-patch"] .pin {
+        border-color: var(--user-tint);
+      }
+      .node[data-kind="user-patch"] .pin-row.unused .pin {
+        border-color: var(--node-edge);
+        background: var(--pin-fill);
+      }
+
       .group-label {
         position: absolute;
         font-family: var(--font-mono);
@@ -232,6 +311,11 @@
         border-radius: 999px;
         background: rgba(255,255,255,0.7);
       }
+      .group-label.user {
+        color: var(--user-tint);
+        border-color: color-mix(in oklab, var(--user-tint) 35%, white);
+        background: var(--user-tint-bg);
+      }
       .stage-frame {
         position: absolute;
         border: 1px dashed var(--grid-strong);
@@ -239,11 +323,16 @@
         background: rgba(255,255,255,0.4);
         z-index: 0;
       }
+      .stage-frame.user-frame {
+        border-style: dashed;
+        border-color: color-mix(in oklab, var(--user-tint) 30%, white);
+        background: color-mix(in oklab, var(--user-tint-bg) 50%, transparent);
+      }
 
       .minimap {
         position: fixed;
         right: 1rem; bottom: 1rem;
-        width: 160px; height: 100px;
+        width: 180px; height: 110px;
         background: rgba(255,255,255,0.85);
         backdrop-filter: blur(8px);
         border: 1px solid var(--node-edge);
@@ -262,7 +351,12 @@
         margin-top: 4px;
         height: calc(100% - 18px);
         background-image:
-          linear-gradient(90deg, var(--c-red) 0 33%, var(--c-cyan) 33% 56%, var(--c-magenta) 56% 78%, var(--c-yellow) 78% 100%);
+          linear-gradient(90deg,
+            var(--c-red) 0 20%,
+            var(--user-tint) 20% 30%,
+            var(--c-cyan) 30% 50%,
+            var(--user-tint) 50% 60%,
+            var(--c-yellow) 60% 100%);
         opacity: 0.18;
         border-radius: 4px;
       }
@@ -275,7 +369,12 @@
         Routing · Node Graph
       </span>
       <span class="crumbs">
-        <strong>festival-mainstage.scn</strong> · 10 inputs · 10 channels · 8 outputs
+        <strong>festival-mainstage.scn</strong>
+        · 10 sources →
+        <span class="u-pill">UIN ×9</span>
+        → 10 channels →
+        <span class="u-pill">UOUT ×4</span>
+        → 8 outputs
       </span>
       <div class="toolbar">
         <span class="pill active">Routing</span>
@@ -288,15 +387,19 @@
     <main class="canvas">
       <div class="stage" id="stage">
         <!-- column frames -->
-        <div class="stage-frame" style="left: 30px; top: 60px; width: 280px; height: 820px;"></div>
-        <div class="stage-frame" style="left: 540px; top: 60px; width: 380px; height: 820px;"></div>
-        <div class="stage-frame" style="left: 1140px; top: 60px; width: 310px; height: 820px;"></div>
+        <div class="stage-frame" style="left: 30px; top: 60px; width: 280px; height: 880px;"></div>
+        <div class="stage-frame user-frame" style="left: 340px; top: 60px; width: 220px; height: 880px;"></div>
+        <div class="stage-frame" style="left: 590px; top: 60px; width: 580px; height: 880px;"></div>
+        <div class="stage-frame user-frame" style="left: 1200px; top: 60px; width: 220px; height: 880px;"></div>
+        <div class="stage-frame" style="left: 1450px; top: 60px; width: 340px; height: 880px;"></div>
 
         <div class="group-label" style="left: 50px; top: 36px;">Sources</div>
-        <div class="group-label" style="left: 560px; top: 36px;">Channels &amp; Buses</div>
-        <div class="group-label" style="left: 1160px; top: 36px;">Outputs</div>
+        <div class="group-label user" style="left: 360px; top: 36px;">User Patch · IN</div>
+        <div class="group-label" style="left: 610px; top: 36px;">Channels &amp; Buses</div>
+        <div class="group-label user" style="left: 1220px; top: 36px;">User Patch · OUT</div>
+        <div class="group-label" style="left: 1470px; top: 36px;">Outputs</div>
 
-        <svg class="wires" id="wires" viewBox="0 0 1480 920" preserveAspectRatio="none"></svg>
+        <svg class="wires" id="wires" viewBox="0 0 1820 980" preserveAspectRatio="none"></svg>
 
         <!-- ─────────── SOURCE NODES (left) ─────────── -->
         <div class="node" data-kind="source" style="left: 50px; top: 90px;">
@@ -347,18 +450,89 @@
           </div>
         </div>
 
-        <div class="node" data-kind="source" style="left: 50px; top: 620px;">
+        <div class="node" data-kind="source" style="left: 50px; top: 640px;">
           <div class="node-head"><span class="dot" style="--accent: var(--c-white)"></span> Aux In <span class="badge">rear</span></div>
           <div class="node-body">
             <div class="pin-row out-only">
-              <span class="label">AUX 1 · Click</span>
+              <span class="label">AUX 1 · Click <span class="meta">↪ direct</span></span>
               <span class="pin out lit" data-pin="src.auxin-01" style="--accent: var(--c-white)"></span>
             </div>
           </div>
         </div>
 
+        <!-- ─────────── USER PATCH · IN (passthrough) ─────────── -->
+        <div class="node" data-kind="user-patch" style="left: 360px; top: 90px;">
+          <div class="node-head">
+            <span class="dot" style="--accent: var(--user-tint)"></span>
+            User Patch · IN
+            <span class="badge">9/32</span>
+          </div>
+          <div class="node-body">
+            <div class="pin-row both">
+              <span class="pin in lit" data-pin="uin.01.in" style="--accent: var(--c-red)"></span>
+              <span class="label">U-01<span class="meta">Lead</span></span>
+              <span class="pin out lit" data-pin="uin.01.out" style="--accent: var(--c-red)"></span>
+            </div>
+            <div class="pin-row both">
+              <span class="pin in lit" data-pin="uin.02.in" style="--accent: var(--c-red)"></span>
+              <span class="label">U-02<span class="meta">BVox</span></span>
+              <span class="pin out lit" data-pin="uin.02.out" style="--accent: var(--c-red)"></span>
+            </div>
+            <div class="pin-row both">
+              <span class="pin in lit" data-pin="uin.03.in" style="--accent: var(--c-yellow)"></span>
+              <span class="label">U-03<span class="meta">Kick</span></span>
+              <span class="pin out lit" data-pin="uin.03.out" style="--accent: var(--c-yellow)"></span>
+            </div>
+            <div class="pin-row both">
+              <span class="pin in lit" data-pin="uin.04.in" style="--accent: var(--c-yellow)"></span>
+              <span class="label">U-04<span class="meta">Snare</span></span>
+              <span class="pin out lit" data-pin="uin.04.out" style="--accent: var(--c-yellow)"></span>
+            </div>
+            <div class="pin-row both">
+              <span class="pin in lit" data-pin="uin.05.in" style="--accent: var(--c-cyan)"></span>
+              <span class="label">U-05<span class="meta">Bass</span></span>
+              <span class="pin out lit" data-pin="uin.05.out" style="--accent: var(--c-cyan)"></span>
+            </div>
+            <div class="pin-row both">
+              <span class="pin in lit" data-pin="uin.06.in" style="--accent: var(--c-green)"></span>
+              <span class="label">U-06<span class="meta">Gtr L</span></span>
+              <span class="pin out lit" data-pin="uin.06.out" style="--accent: var(--c-green)"></span>
+            </div>
+            <div class="pin-row both">
+              <span class="pin in lit" data-pin="uin.07.in" style="--accent: var(--c-green)"></span>
+              <span class="label">U-07<span class="meta">Gtr R</span></span>
+              <span class="pin out lit" data-pin="uin.07.out" style="--accent: var(--c-green)"></span>
+            </div>
+            <div class="pin-row both">
+              <span class="pin in lit" data-pin="uin.08.in" style="--accent: var(--c-magenta)"></span>
+              <span class="label">U-08<span class="meta">Keys L</span></span>
+              <span class="pin out lit" data-pin="uin.08.out" style="--accent: var(--c-magenta)"></span>
+            </div>
+            <div class="pin-row both">
+              <span class="pin in lit" data-pin="uin.09.in" style="--accent: var(--c-magenta)"></span>
+              <span class="label">U-09<span class="meta">Keys R</span></span>
+              <span class="pin out lit" data-pin="uin.09.out" style="--accent: var(--c-magenta)"></span>
+            </div>
+            <div class="pin-row both unused">
+              <span class="pin in"></span>
+              <span class="label">U-10</span>
+              <span class="pin out"></span>
+            </div>
+            <div class="pin-row both unused">
+              <span class="pin in"></span>
+              <span class="label">U-11</span>
+              <span class="pin out"></span>
+            </div>
+            <div class="pin-row both unused">
+              <span class="pin in"></span>
+              <span class="label">U-12</span>
+              <span class="pin out"></span>
+            </div>
+          </div>
+        </div>
+
         <!-- ─────────── CHANNEL NODES (middle) ─────────── -->
-        <div class="node" data-kind="channel" style="left: 560px; top: 90px; --accent: var(--c-red);">
+        <div class="node" data-kind="channel" style="left: 610px; top: 90px; --accent: var(--c-red);">
           <div class="node-head"><span class="dot"></span> Vocals · Ch 01-02 <span class="badge">×2</span></div>
           <div class="node-body">
             <div class="pin-row both">
@@ -374,7 +548,7 @@
           </div>
         </div>
 
-        <div class="node" data-kind="channel" style="left: 560px; top: 280px; --accent: var(--c-yellow);">
+        <div class="node" data-kind="channel" style="left: 610px; top: 280px; --accent: var(--c-yellow);">
           <div class="node-head"><span class="dot"></span> Drums · Ch 03-04 <span class="badge">×2</span></div>
           <div class="node-body">
             <div class="pin-row both">
@@ -390,7 +564,7 @@
           </div>
         </div>
 
-        <div class="node" data-kind="channel" style="left: 560px; top: 460px; --accent: var(--c-cyan);">
+        <div class="node" data-kind="channel" style="left: 610px; top: 460px; --accent: var(--c-cyan);">
           <div class="node-head"><span class="dot"></span> Bass · Ch 05 <span class="badge">×1</span></div>
           <div class="node-body">
             <div class="pin-row both">
@@ -401,7 +575,7 @@
           </div>
         </div>
 
-        <div class="node" data-kind="channel" style="left: 800px; top: 280px; --accent: var(--c-green);">
+        <div class="node" data-kind="channel" style="left: 870px; top: 280px; --accent: var(--c-green);">
           <div class="node-head"><span class="dot"></span> Guitar · Ch 06-07 <span class="badge">×2</span></div>
           <div class="node-body">
             <div class="pin-row both">
@@ -417,7 +591,7 @@
           </div>
         </div>
 
-        <div class="node" data-kind="channel" style="left: 800px; top: 460px; --accent: var(--c-magenta);">
+        <div class="node" data-kind="channel" style="left: 870px; top: 460px; --accent: var(--c-magenta);">
           <div class="node-head"><span class="dot"></span> Keys · Ch 08-09 <span class="badge">×2</span></div>
           <div class="node-body">
             <div class="pin-row both">
@@ -433,7 +607,7 @@
           </div>
         </div>
 
-        <div class="node" data-kind="channel" style="left: 560px; top: 640px; --accent: var(--c-white);">
+        <div class="node" data-kind="channel" style="left: 610px; top: 640px; --accent: var(--c-white);">
           <div class="node-head"><span class="dot"></span> Aux In Strip <span class="badge">×1</span></div>
           <div class="node-body">
             <div class="pin-row both">
@@ -445,7 +619,7 @@
         </div>
 
         <!-- Bus mixer node — collects channel taps and feeds outputs -->
-        <div class="node" data-kind="channel" style="left: 800px; top: 640px; --accent: var(--c-blue); width: 280px;">
+        <div class="node" data-kind="channel" style="left: 870px; top: 640px; --accent: var(--c-blue); width: 280px;">
           <div class="node-head"><span class="dot"></span> Buses &amp; Mains <span class="badge">summing</span></div>
           <div class="node-body">
             <div class="pin-row both">
@@ -466,8 +640,69 @@
           </div>
         </div>
 
+        <!-- ─────────── USER PATCH · OUT (passthrough) ─────────── -->
+        <div class="node" data-kind="user-patch" style="left: 1220px; top: 90px;">
+          <div class="node-head">
+            <span class="dot" style="--accent: var(--user-tint)"></span>
+            User Patch · OUT
+            <span class="badge">4/32</span>
+          </div>
+          <div class="node-body">
+            <div class="pin-row both">
+              <span class="pin in lit" data-pin="uout.01.in" style="--accent: var(--c-white)"></span>
+              <span class="label">U-01<span class="meta">Mains L</span></span>
+              <span class="pin out lit" data-pin="uout.01.out" style="--accent: var(--c-white)"></span>
+            </div>
+            <div class="pin-row both">
+              <span class="pin in lit" data-pin="uout.02.in" style="--accent: var(--c-white)"></span>
+              <span class="label">U-02<span class="meta">Mains R</span></span>
+              <span class="pin out lit" data-pin="uout.02.out" style="--accent: var(--c-white)"></span>
+            </div>
+            <div class="pin-row both unused">
+              <span class="pin in"></span>
+              <span class="label">U-03</span>
+              <span class="pin out"></span>
+            </div>
+            <div class="pin-row both unused">
+              <span class="pin in"></span>
+              <span class="label">U-04</span>
+              <span class="pin out"></span>
+            </div>
+            <div class="pin-row both unused">
+              <span class="pin in"></span>
+              <span class="label">U-05</span>
+              <span class="pin out"></span>
+            </div>
+            <div class="pin-row both unused">
+              <span class="pin in"></span>
+              <span class="label">U-06</span>
+              <span class="pin out"></span>
+            </div>
+            <div class="pin-row both">
+              <span class="pin in lit" data-pin="uout.07.in" style="--accent: var(--c-red)"></span>
+              <span class="label">U-07<span class="meta">IEM Vox</span></span>
+              <span class="pin out lit" data-pin="uout.07.out" style="--accent: var(--c-red)"></span>
+            </div>
+            <div class="pin-row both">
+              <span class="pin in lit" data-pin="uout.08.in" style="--accent: var(--c-yellow)"></span>
+              <span class="label">U-08<span class="meta">IEM Drm</span></span>
+              <span class="pin out lit" data-pin="uout.08.out" style="--accent: var(--c-yellow)"></span>
+            </div>
+            <div class="pin-row both unused">
+              <span class="pin in"></span>
+              <span class="label">U-09</span>
+              <span class="pin out"></span>
+            </div>
+            <div class="pin-row both unused">
+              <span class="pin in"></span>
+              <span class="label">U-10</span>
+              <span class="pin out"></span>
+            </div>
+          </div>
+        </div>
+
         <!-- ─────────── OUTPUT NODES (right) ─────────── -->
-        <div class="node" data-kind="output" style="left: 1160px; top: 90px;">
+        <div class="node" data-kind="output" style="left: 1470px; top: 90px;">
           <div class="node-head"><span class="dot" style="--accent: var(--c-white)"></span> XLR Outs 1-8 <span class="badge">local</span></div>
           <div class="node-body">
             <div class="pin-row in-only">
@@ -489,8 +724,8 @@
           </div>
         </div>
 
-        <div class="node" data-kind="output" style="left: 1160px; top: 380px;">
-          <div class="node-head"><span class="dot" style="--accent: var(--c-yellow)"></span> P-16 Personal <span class="badge">stage</span></div>
+        <div class="node" data-kind="output" style="left: 1470px; top: 380px;">
+          <div class="node-head"><span class="dot" style="--accent: var(--c-yellow)"></span> P-16 Personal <span class="badge">↪ direct</span></div>
           <div class="node-body">
             <div class="pin-row in-only">
               <span class="pin in lit" data-pin="out.p16-01" style="--accent: var(--c-red)"></span>
@@ -507,8 +742,8 @@
           </div>
         </div>
 
-        <div class="node" data-kind="output" style="left: 1160px; top: 620px;">
-          <div class="node-head"><span class="dot" style="--accent: var(--c-red)"></span> AES50-B <span class="badge">multitrack</span></div>
+        <div class="node" data-kind="output" style="left: 1470px; top: 640px;">
+          <div class="node-head"><span class="dot" style="--accent: var(--c-red)"></span> AES50-B <span class="badge">↪ direct</span></div>
           <div class="node-body">
             <div class="pin-row in-only">
               <span class="pin in lit" data-pin="out.aes50b-01" style="--accent: var(--c-red)"></span>
@@ -520,25 +755,40 @@
     </main>
 
     <div class="minimap">
-      <div class="label">Minimap</div>
+      <div class="label">Minimap · 5 lanes</div>
       <div class="preview"></div>
     </div>
 
     <script>
-      // [from-pin, to-pin, color]
+      // [from-pin, to-pin, color, kind?]
+      // kind: undefined | 'bypass' (dashed thinner — bypasses user patch)
       const WIRES = [
-        ['src.local-01', 'ch.01.in', 'red'],
-        ['src.local-02', 'ch.02.in', 'red'],
-        ['src.local-03', 'ch.03.in', 'yellow'],
-        ['src.local-04', 'ch.04.in', 'yellow'],
-        ['src.aes50a-01', 'ch.05.in', 'cyan'],
-        ['src.aes50a-09', 'ch.06.in', 'green'],
-        ['src.aes50a-10', 'ch.07.in', 'green'],
-        ['src.aes50a-17', 'ch.08.in', 'magenta'],
-        ['src.aes50a-18', 'ch.09.in', 'magenta'],
-        ['src.auxin-01',  'aux.01.in', 'white'],
+        // ─── Sources → User Patch · IN ───
+        ['src.local-01', 'uin.01.in', 'red'],
+        ['src.local-02', 'uin.02.in', 'red'],
+        ['src.local-03', 'uin.03.in', 'yellow'],
+        ['src.local-04', 'uin.04.in', 'yellow'],
+        ['src.aes50a-01', 'uin.05.in', 'cyan'],
+        ['src.aes50a-09', 'uin.06.in', 'green'],
+        ['src.aes50a-10', 'uin.07.in', 'green'],
+        ['src.aes50a-17', 'uin.08.in', 'magenta'],
+        ['src.aes50a-18', 'uin.09.in', 'magenta'],
 
-        // Channels feed buses
+        // ─── User Patch · IN → Channels ───
+        ['uin.01.out', 'ch.01.in', 'red'],
+        ['uin.02.out', 'ch.02.in', 'red'],
+        ['uin.03.out', 'ch.03.in', 'yellow'],
+        ['uin.04.out', 'ch.04.in', 'yellow'],
+        ['uin.05.out', 'ch.05.in', 'cyan'],
+        ['uin.06.out', 'ch.06.in', 'green'],
+        ['uin.07.out', 'ch.07.in', 'green'],
+        ['uin.08.out', 'ch.08.in', 'magenta'],
+        ['uin.09.out', 'ch.09.in', 'magenta'],
+
+        // ─── Source → Channel direct (bypasses UIN) ───
+        ['src.auxin-01', 'aux.01.in', 'white', 'bypass'],
+
+        // ─── Channels feed buses ───
         ['ch.01.out', 'bus.main.in', 'red'],
         ['ch.02.out', 'bus.main.in', 'red'],
         ['ch.05.out', 'bus.main.in', 'cyan'],
@@ -552,26 +802,31 @@
         ['ch.03.out', 'bus.iem-drum.in', 'yellow'],
         ['ch.04.out', 'bus.iem-drum.in', 'yellow'],
 
-        // Buses → outputs
-        ['bus.main.out', 'out.xlr-01', 'white'],
-        ['bus.main.out', 'out.xlr-02', 'white'],
-        ['bus.iem-vox.out', 'out.xlr-07', 'red'],
-        ['bus.iem-drum.out', 'out.xlr-08', 'yellow'],
+        // ─── Buses → User Patch · OUT ───
+        ['bus.main.out', 'uout.01.in', 'white'],
+        ['bus.main.out', 'uout.02.in', 'white'],
+        ['bus.iem-vox.out', 'uout.07.in', 'red'],
+        ['bus.iem-drum.out', 'uout.08.in', 'yellow'],
 
-        // Direct channel taps to P-16 / multitrack
-        ['ch.01.out', 'out.p16-01', 'red'],
-        ['ch.03.out', 'out.p16-03', 'yellow'],
-        ['ch.05.out', 'out.p16-05', 'cyan'],
-        ['ch.01.out', 'out.aes50b-01', 'red'],
+        // ─── User Patch · OUT → Outputs ───
+        ['uout.01.out', 'out.xlr-01', 'white'],
+        ['uout.02.out', 'out.xlr-02', 'white'],
+        ['uout.07.out', 'out.xlr-07', 'red'],
+        ['uout.08.out', 'out.xlr-08', 'yellow'],
+
+        // ─── Channels → Outputs direct (bypasses UOUT) ───
+        ['ch.01.out', 'out.p16-01', 'red', 'bypass'],
+        ['ch.03.out', 'out.p16-03', 'yellow', 'bypass'],
+        ['ch.05.out', 'out.p16-05', 'cyan', 'bypass'],
+        ['ch.01.out', 'out.aes50b-01', 'red', 'bypass'],
       ];
 
-      function pinCenter(pin, side) {
+      function pinCenter(pin) {
         const stageR = document.getElementById('stage').getBoundingClientRect();
         const r = pin.getBoundingClientRect();
         return {
           x: r.left - stageR.left + r.width / 2,
           y: r.top - stageR.top + r.height / 2,
-          side,
         };
       }
 
@@ -586,18 +841,17 @@
         clearChildren(svg);
 
         const NS = 'http://www.w3.org/2000/svg';
-        for (const [fromId, toId, color] of WIRES) {
+        for (const [fromId, toId, color, kind] of WIRES) {
           const fromEl = document.querySelector(`[data-pin="${fromId}"]`);
           const toEl = document.querySelector(`[data-pin="${toId}"]`);
           if (!fromEl || !toEl) continue;
-          const a = pinCenter(fromEl, 'out');
-          const b = pinCenter(toEl, 'in');
-          // smooth horizontal bezier between pins
+          const a = pinCenter(fromEl);
+          const b = pinCenter(toEl);
           const dx = Math.max(40, Math.abs(b.x - a.x) * 0.45);
           const path = `M ${a.x} ${a.y} C ${a.x + dx} ${a.y}, ${b.x - dx} ${b.y}, ${b.x} ${b.y}`;
           const wire = document.createElementNS(NS, 'path');
           wire.setAttribute('d', path);
-          wire.setAttribute('class', 'wire');
+          wire.setAttribute('class', kind === 'bypass' ? 'wire bypass' : 'wire');
           wire.setAttribute('stroke', `var(--c-${color})`);
           svg.appendChild(wire);
         }
