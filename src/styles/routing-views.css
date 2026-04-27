@@ -98,11 +98,12 @@
 
 .rv-bay {
   position: relative;
-  max-width: 1380px;
+  width: max-content;
+  min-width: calc(100vw - 2rem);
   min-height: 40rem;
   margin: 0 auto;
-  padding: 1.7rem 1.25rem 1.5rem;
-  overflow: hidden;
+  padding: 2rem 2.25rem 1.8rem;
+  overflow: auto;
   border: 1px solid var(--rv-panel-edge);
   border-radius: 8px;
   background:
@@ -148,10 +149,15 @@
 
 .rv-wire {
   fill: none;
-  stroke-width: 2.1;
+  stroke-width: 2.2;
   stroke-linecap: round;
   opacity: 0.84;
   filter: drop-shadow(0 2px 1px rgba(0, 0, 0, 0.45));
+  pointer-events: stroke;
+  transition:
+    opacity 120ms ease,
+    stroke-width 120ms ease,
+    filter 120ms ease;
 }
 
 .rv-wire.bypass {
@@ -160,12 +166,29 @@
   opacity: 0.55;
 }
 
+.rv-wire.dimmed {
+  opacity: 0.08;
+  filter: none;
+}
+
+.rv-wire.active {
+  stroke-width: 4.4;
+  opacity: 1;
+  filter:
+    drop-shadow(0 0 2px rgba(255, 255, 255, 0.88))
+    drop-shadow(0 3px 4px rgba(0, 0, 0, 0.55));
+}
+
+.rv-wire.bypass.active {
+  stroke-width: 3.4;
+}
+
 .rv-columns {
   position: relative;
   z-index: 2;
   display: grid;
-  grid-template-columns: minmax(13rem, 1.1fr) minmax(7.5rem, 0.55fr) minmax(14rem, 1fr) minmax(7.5rem, 0.55fr) minmax(13rem, 1.1fr);
-  gap: clamp(1rem, 2vw, 2.4rem);
+  grid-template-columns: 18rem 12rem 22rem 12rem 20rem;
+  gap: 4.25rem;
 }
 
 .rv-col {
@@ -219,12 +242,32 @@
   display: grid;
   align-items: center;
   min-width: 0;
-  height: 32px;
-  margin-bottom: 4px;
+  height: 34px;
+  margin-bottom: 5px;
   border: 1px solid var(--rv-row-edge);
   border-radius: 6px;
   background: linear-gradient(180deg, #1f2329 0%, #181b21 100%);
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset;
+  transition:
+    opacity 120ms ease,
+    border-color 120ms ease,
+    box-shadow 120ms ease,
+    transform 120ms ease;
+}
+
+.routing-visual.highlight-active .rv-row:not(.highlighted),
+.routing-visual.highlight-active .rv-node-pin-row:not(.highlighted) {
+  opacity: 0.42;
+}
+
+.rv-row.highlighted {
+  z-index: 4;
+  border-color: color-mix(in oklab, var(--rv-accent) 68%, white);
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--rv-accent) 52%, transparent),
+    0 0 18px -5px var(--rv-accent),
+    0 1px 0 rgba(255, 255, 255, 0.05) inset;
+  transform: translateX(1px);
 }
 
 .rv-source-row {
@@ -450,12 +493,12 @@
   position: relative;
   z-index: 0;
   display: grid;
-  grid-template-columns: 16rem 13rem minmax(24rem, 34rem) 13rem 17rem;
-  gap: 2rem;
+  grid-template-columns: 18rem 15rem minmax(38rem, 52rem) 15rem 20rem;
+  gap: 4.5rem;
   width: max-content;
   min-width: 100%;
   min-height: calc(100vh - 7rem);
-  padding: 1.6rem 2rem 2.2rem;
+  padding: 2.2rem 3rem 3rem;
 }
 
 .rv-node-column {
@@ -464,12 +507,14 @@
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.5rem;
 }
 
 .rv-node-processors {
   display: grid;
   grid-template-columns: repeat(2, minmax(13rem, 1fr));
+  column-gap: 3rem;
+  row-gap: 1.5rem;
   align-content: start;
 }
 
@@ -508,6 +553,10 @@
     0 1px 0 rgba(255, 255, 255, 0.6) inset,
     0 2px 4px rgba(0, 0, 0, 0.04),
     0 8px 24px -10px rgba(0, 0, 0, 0.12);
+  transition:
+    opacity 120ms ease,
+    box-shadow 120ms ease,
+    border-color 120ms ease;
 }
 
 .rv-node[data-kind="processor"] {
@@ -586,7 +635,12 @@
   display: grid;
   align-items: center;
   gap: 6px;
-  padding: 4px 8px;
+  min-height: 30px;
+  padding: 5px 10px;
+  transition:
+    opacity 120ms ease,
+    background 120ms ease,
+    box-shadow 120ms ease;
 }
 
 .rv-node-pin-row.both {
@@ -603,6 +657,11 @@
 
 .rv-node-pin-row:hover {
   background: #fafafa;
+}
+
+.rv-node-pin-row.highlighted {
+  background: color-mix(in oklab, var(--rv-accent) 12%, white);
+  box-shadow: inset 3px 0 0 var(--rv-accent);
 }
 
 .rv-node-pin-row.unused {

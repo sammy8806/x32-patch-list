@@ -7,7 +7,7 @@
  */
 
 import { LitElement, html, nothing } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
+import { customElement, property, state } from 'lit/decorators.js';
 import { classMap } from 'lit/directives/class-map.js';
 import { styleMap } from 'lit/directives/style-map.js';
 
@@ -37,6 +37,11 @@ export class RoutingVisualizer extends LitElement {
   @property({ attribute: false }) parser!: ScnParser;
   @property({ type: String }) mode: RoutingVisualMode = 'patchbay';
   @property({ type: String }) filename = '';
+
+  @state() private previewPins: string[] = [];
+  @state() private lockedPins: string[] = [];
+  @state() private previewConnection: string | null = null;
+  @state() private lockedConnection: string | null = null;
 
   private model: RoutingVisualModel | null = null;
 
@@ -79,9 +84,15 @@ export class RoutingVisualizer extends LitElement {
 
   private renderPatchbay(model: RoutingVisualModel) {
     return html`
-      <section class="routing-visual routing-patchbay">
+      <section
+        class=${classMap({
+          'routing-visual': true,
+          'routing-patchbay': true,
+          'highlight-active': this.hasHighlight(),
+        })}
+      >
         ${this.renderPatchbayHeader(model)}
-        <div class="rv-bay rv-wire-stage">
+        <div class="rv-bay rv-wire-stage" @click=${this.clearLockedHighlight}>
           <span class="rv-screw tl"></span>
           <span class="rv-screw tr"></span>
           <span class="rv-screw bl"></span>
@@ -122,7 +133,13 @@ export class RoutingVisualizer extends LitElement {
 
   private renderNodeGraph(model: RoutingVisualModel) {
     return html`
-      <section class="routing-visual routing-nodes">
+      <section
+        class=${classMap({
+          'routing-visual': true,
+          'routing-nodes': true,
+          'highlight-active': this.hasHighlight(),
+        })}
+      >
         <header class="rv-node-bar">
           <span class="rv-brand">
             <span class="rv-version">V6</span>
@@ -139,7 +156,7 @@ export class RoutingVisualizer extends LitElement {
         </header>
 
         <main class="rv-node-canvas">
-          <div class="rv-node-stage rv-wire-stage">
+          <div class="rv-node-stage rv-wire-stage" @click=${this.clearLockedHighlight}>
             <svg class="routing-wires" aria-hidden="true"></svg>
             <div class="rv-node-column">
               <div class="rv-lane-label">Sources</div>
@@ -227,9 +244,20 @@ export class RoutingVisualizer extends LitElement {
     kind: 'source' | 'processor' | 'output',
   ) {
     const styles = { '--rv-accent': endpoint.color };
+    const pins = endpointPins(kind, endpoint.key);
     if (kind === 'source') {
       return html`
-        <div class="rv-row rv-source-row" style=${styleMap(styles)}>
+        <div
+          class=${classMap({
+            'rv-row': true,
+            'rv-source-row': true,
+            highlighted: this.isPinSetHighlighted(pins),
+          })}
+          style=${styleMap(styles)}
+          @pointerenter=${() => this.setPreviewPins(pins)}
+          @pointerleave=${this.clearPreviewHighlight}
+          @click=${(event: Event) => this.lockPinSet(event, pins)}
+        >
           <span class="rv-id">${endpoint.label}</span>
           ${this.renderName(endpoint)}
           <span class="rv-pin lit" data-pin=${sourceOutPin(endpoint.key)}></span>
@@ -238,7 +266,17 @@ export class RoutingVisualizer extends LitElement {
     }
     if (kind === 'output') {
       return html`
-        <div class="rv-row rv-output-row" style=${styleMap(styles)}>
+        <div
+          class=${classMap({
+            'rv-row': true,
+            'rv-output-row': true,
+            highlighted: this.isPinSetHighlighted(pins),
+          })}
+          style=${styleMap(styles)}
+          @pointerenter=${() => this.setPreviewPins(pins)}
+          @pointerleave=${this.clearPreviewHighlight}
+          @click=${(event: Event) => this.lockPinSet(event, pins)}
+        >
           <span class="rv-pin lit" data-pin=${outputInPin(endpoint.key)}></span>
           ${this.renderName(endpoint)}
           <span class="rv-id">${endpoint.label}</span>
@@ -246,7 +284,17 @@ export class RoutingVisualizer extends LitElement {
       `;
     }
     return html`
-      <div class="rv-row rv-processor-row" style=${styleMap(styles)}>
+      <div
+        class=${classMap({
+          'rv-row': true,
+          'rv-processor-row': true,
+          highlighted: this.isPinSetHighlighted(pins),
+        })}
+        style=${styleMap(styles)}
+        @pointerenter=${() => this.setPreviewPins(pins)}
+        @pointerleave=${this.clearPreviewHighlight}
+        @click=${(event: Event) => this.lockPinSet(event, pins)}
+      >
         <span class="rv-pin lit" data-pin=${processorInPin(endpoint.key)}></span>
         <span class="rv-tab"></span>
         ${this.renderName(endpoint)}
@@ -267,10 +315,19 @@ export class RoutingVisualizer extends LitElement {
   }
 
   private renderUserRow(slot: UserRouteSlot) {
+    const pins = [userInPin(slot.key), userOutPin(slot.key)];
     return html`
       <div
-        class=${classMap({ 'rv-row': true, 'rv-user-row': true, unused: !slot.active })}
+        class=${classMap({
+          'rv-row': true,
+          'rv-user-row': true,
+          unused: !slot.active,
+          highlighted: this.isPinSetHighlighted(pins),
+        })}
         style=${styleMap({ '--rv-accent': slot.color })}
+        @pointerenter=${() => this.setPreviewPins(pins)}
+        @pointerleave=${this.clearPreviewHighlight}
+        @click=${(event: Event) => this.lockPinSet(event, pins)}
       >
         <span
           class=${classMap({ 'rv-pin': true, lit: slot.active })}
@@ -313,6 +370,7 @@ export class RoutingVisualizer extends LitElement {
     kind: 'source' | 'processor' | 'output',
   ) {
     const styles = { '--rv-accent': endpoint.color };
+    const pins = endpointPins(kind, endpoint.key);
     const label = html`
       <span class="rv-node-label">
         ${endpoint.label}
@@ -322,7 +380,17 @@ export class RoutingVisualizer extends LitElement {
 
     if (kind === 'source') {
       return html`
-        <div class="rv-node-pin-row out-only" style=${styleMap(styles)}>
+        <div
+          class=${classMap({
+            'rv-node-pin-row': true,
+            'out-only': true,
+            highlighted: this.isPinSetHighlighted(pins),
+          })}
+          style=${styleMap(styles)}
+          @pointerenter=${() => this.setPreviewPins(pins)}
+          @pointerleave=${this.clearPreviewHighlight}
+          @click=${(event: Event) => this.lockPinSet(event, pins)}
+        >
           ${label}
           <span class="rv-node-pin out lit" data-pin=${sourceOutPin(endpoint.key)}></span>
         </div>
@@ -330,14 +398,34 @@ export class RoutingVisualizer extends LitElement {
     }
     if (kind === 'output') {
       return html`
-        <div class="rv-node-pin-row in-only" style=${styleMap(styles)}>
+        <div
+          class=${classMap({
+            'rv-node-pin-row': true,
+            'in-only': true,
+            highlighted: this.isPinSetHighlighted(pins),
+          })}
+          style=${styleMap(styles)}
+          @pointerenter=${() => this.setPreviewPins(pins)}
+          @pointerleave=${this.clearPreviewHighlight}
+          @click=${(event: Event) => this.lockPinSet(event, pins)}
+        >
           <span class="rv-node-pin in lit" data-pin=${outputInPin(endpoint.key)}></span>
           ${label}
         </div>
       `;
     }
     return html`
-      <div class="rv-node-pin-row both" style=${styleMap(styles)}>
+      <div
+        class=${classMap({
+          'rv-node-pin-row': true,
+          both: true,
+          highlighted: this.isPinSetHighlighted(pins),
+        })}
+        style=${styleMap(styles)}
+        @pointerenter=${() => this.setPreviewPins(pins)}
+        @pointerleave=${this.clearPreviewHighlight}
+        @click=${(event: Event) => this.lockPinSet(event, pins)}
+      >
         <span class="rv-node-pin in lit" data-pin=${processorInPin(endpoint.key)}></span>
         ${label}
         <span class="rv-node-pin out lit" data-pin=${processorOutPin(endpoint.key)}></span>
@@ -366,14 +454,19 @@ export class RoutingVisualizer extends LitElement {
   }
 
   private renderUserNodeRow(slot: UserRouteSlot) {
+    const pins = [userInPin(slot.key), userOutPin(slot.key)];
     return html`
       <div
         class=${classMap({
           'rv-node-pin-row': true,
           both: true,
           unused: !slot.active,
+          highlighted: this.isPinSetHighlighted(pins),
         })}
         style=${styleMap({ '--rv-accent': slot.color })}
+        @pointerenter=${() => this.setPreviewPins(pins)}
+        @pointerleave=${this.clearPreviewHighlight}
+        @click=${(event: Event) => this.lockPinSet(event, pins)}
       >
         <span
           class=${classMap({ 'rv-node-pin': true, in: true, lit: slot.active })}
@@ -442,9 +535,67 @@ export class RoutingVisualizer extends LitElement {
         'class',
         connection.kind === 'bypass' ? 'rv-wire bypass' : 'rv-wire',
       );
+      path.dataset.connection = connectionKey(connection);
+      path.dataset.from = connection.fromPin;
+      path.dataset.to = connection.toPin;
       path.setAttribute('stroke', connection.color);
+      path.addEventListener('pointerenter', () => {
+        this.previewConnection = connectionKey(connection);
+      });
+      path.addEventListener('pointerleave', () => {
+        this.previewConnection = null;
+      });
+      path.addEventListener('click', (event) => {
+        event.stopPropagation();
+        this.lockedConnection =
+          this.lockedConnection === connectionKey(connection)
+            ? null
+            : connectionKey(connection);
+        this.lockedPins = [];
+      });
+      applyWireHighlight(path, connection, this.activePinSet(), this.activeConnection());
       svg.appendChild(path);
     }
+  }
+
+  private setPreviewPins(pins: string[]): void {
+    if (this.lockedConnection) return;
+    this.previewPins = pins;
+    this.previewConnection = null;
+  }
+
+  private clearPreviewHighlight = (): void => {
+    this.previewPins = [];
+    this.previewConnection = null;
+  };
+
+  private lockPinSet(event: Event, pins: string[]): void {
+    event.stopPropagation();
+    const next = samePins(this.lockedPins, pins) ? [] : pins;
+    this.lockedPins = next;
+    this.lockedConnection = null;
+  }
+
+  private clearLockedHighlight = (): void => {
+    this.lockedPins = [];
+    this.lockedConnection = null;
+  };
+
+  private activePinSet(): Set<string> {
+    return new Set(this.lockedPins.length > 0 ? this.lockedPins : this.previewPins);
+  }
+
+  private activeConnection(): string | null {
+    return this.lockedConnection ?? this.previewConnection;
+  }
+
+  private hasHighlight(): boolean {
+    return this.activePinSet().size > 0 || this.activeConnection() !== null;
+  }
+
+  private isPinSetHighlighted(pins: string[]): boolean {
+    const active = this.activePinSet();
+    return active.size > 0 && pins.some((pin) => active.has(pin));
   }
 }
 
@@ -489,6 +640,40 @@ function pinCenter(stageRect: DOMRect, pin: HTMLElement): { x: number; y: number
 
 function uniqueColors(connections: RoutingConnection[]): string[] {
   return [...new Set(connections.map((connection) => connection.color))];
+}
+
+function endpointPins(
+  kind: 'source' | 'processor' | 'output',
+  key: string,
+): string[] {
+  if (kind === 'source') return [sourceOutPin(key)];
+  if (kind === 'output') return [outputInPin(key)];
+  return [processorInPin(key), processorOutPin(key)];
+}
+
+function connectionKey(connection: RoutingConnection): string {
+  return `${connection.fromPin}->${connection.toPin}`;
+}
+
+function applyWireHighlight(
+  path: SVGPathElement,
+  connection: RoutingConnection,
+  activePins: Set<string>,
+  activeConnection: string | null,
+): void {
+  const hasPinHighlight = activePins.size > 0;
+  const hasConnectionHighlight = activeConnection !== null;
+  const active =
+    activeConnection === connectionKey(connection) ||
+    (hasPinHighlight &&
+      (activePins.has(connection.fromPin) || activePins.has(connection.toPin)));
+
+  path.classList.toggle('active', active);
+  path.classList.toggle('dimmed', (hasPinHighlight || hasConnectionHighlight) && !active);
+}
+
+function samePins(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((pin, index) => pin === b[index]);
 }
 
 function colorLabel(color: string): string {
