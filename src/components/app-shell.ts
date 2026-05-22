@@ -275,9 +275,12 @@ export class AppShell extends LitElement {
   };
 
   private onPrint = () => {
+    if (!this.session) return;
+
+    const filename = this.session.filename;
     this.viewMode = 'list';
     this.syncViewUrl('list');
-    requestAnimationFrame(() => window.print());
+    requestAnimationFrame(() => this.printWithSceneFilename(filename));
   };
 
   private onRowTextChange = (e: CustomEvent<RowTextFieldChange>) => {
@@ -410,6 +413,20 @@ export class AppShell extends LitElement {
       saveSession(this.sessionId, this.session, scene);
       this.recentFilesList = recentFiles();
     }
+  }
+
+  private printWithSceneFilename(filename: string): void {
+    const previousTitle = document.title;
+    const sceneTitle = filename.replace(/\.[^./]+$/, '').trim();
+    document.title = sceneTitle || previousTitle;
+
+    const restoreTitle = () => {
+      document.title = previousTitle;
+      window.removeEventListener('afterprint', restoreTitle);
+    };
+
+    window.addEventListener('afterprint', restoreTitle);
+    window.print();
   }
 
   private urlSessionId(): string | null {
