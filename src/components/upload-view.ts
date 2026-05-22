@@ -90,6 +90,11 @@ export class UploadView extends LitElement {
         @dragleave=${this.onDragLeave}
         @drop=${this.onDrop}
       >
+        <div class="start-logo" aria-label="Behringer X32 Routing Planner">
+          <div class="start-logo-brand">Behringer X32</div>
+          <div class="start-logo-title">Routing Planner</div>
+        </div>
+
         <div class="start-main">
           <h1>Open a scene file</h1>
           <p class="lede">
