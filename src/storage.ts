@@ -257,6 +257,23 @@ export function recentFiles(limit = 5): RecentFile[] {
     }));
 }
 
+export function removeSession(sessionId: string): void {
+  const root = read();
+  if (!(sessionId in root.sessions)) return;
+
+  delete root.sessions[sessionId];
+
+  if (root.lastSessionId === sessionId) {
+    const nextLast = Object.entries(root.sessions).sort(
+      ([, aEntry], [, bEntry]) => bEntry.updatedAt - aEntry.updatedAt,
+    )[0];
+    root.lastSessionId = nextLast?.[0];
+    root.lastFilename = nextLast?.[1].state.filename;
+  }
+
+  write(root);
+}
+
 export function clearAll(): void {
   try {
     localStorage.removeItem(ROOT_KEY);

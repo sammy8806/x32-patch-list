@@ -10,6 +10,7 @@ import {
   makeEmptyState,
   mergeRowTextComments,
   recentFiles,
+  removeSession,
   saveSession,
   sessionIdFor,
 } from '../src/storage.js';
@@ -136,6 +137,44 @@ describe('storage', () => {
       expect(findCachedScenesByFilename('festival.scn').map((match) => match.sessionId)).toEqual([
         secondId,
         firstId,
+      ]);
+    } finally {
+      Date.now = originalDateNow;
+    }
+  });
+
+  test('removes one cached session and promotes the next recent session', () => {
+    const originalDateNow = Date.now;
+    const firstId = sessionIdFor('first.scn', '/first');
+    const secondId = sessionIdFor('second.scn', '/second');
+
+    try {
+      Date.now = () => 100;
+      saveSession(firstId, makeEmptyState('first.scn'), {
+        filename: 'first.scn',
+        size: 6,
+        text: '/first',
+      });
+
+      Date.now = () => 200;
+      saveSession(secondId, makeEmptyState('second.scn'), {
+        filename: 'second.scn',
+        size: 7,
+        text: '/second',
+      });
+
+      removeSession(secondId);
+
+      expect(loadSession(secondId)).toBeNull();
+      expect(loadScene(secondId)).toBeNull();
+      expect(lastSessionId()).toBe(firstId);
+      expect(recentFiles()).toEqual([
+        {
+          sessionId: firstId,
+          filename: 'first.scn',
+          cached: true,
+          updatedAt: 100,
+        },
       ]);
     } finally {
       Date.now = originalDateNow;

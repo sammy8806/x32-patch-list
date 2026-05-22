@@ -8,6 +8,7 @@
  * Keyboard model
  *   ↑ / ↓   move selection between items (wraps)
  *   Enter   activate the highlighted item
+ *   Delete  remove the highlighted recent file from local cache
  *   Esc     reset selection to the first item and blur the card
  *   Home/End jump to first / last
  *
@@ -17,6 +18,7 @@
  */
 
 import { LitElement, html, nothing } from 'lit';
+import type { PropertyValues } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 
 import type { RecentFile } from '../storage.js';
@@ -28,6 +30,10 @@ export interface SceneSelectedDetail {
 }
 
 export interface RecentSelectedDetail {
+  sessionId: string;
+}
+
+export interface RecentRemoveRequestedDetail {
   sessionId: string;
 }
 
@@ -67,6 +73,11 @@ export class UploadView extends LitElement {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     window.removeEventListener('keydown', this.onKeyDown);
+  }
+
+  protected override updated(changed: PropertyValues<this>): void {
+    if (!changed.has('recentFiles')) return;
+    this.activeIndex = Math.min(this.activeIndex, this.items.length - 1);
   }
 
   override render() {
@@ -125,6 +136,9 @@ export class UploadView extends LitElement {
               <span class="keys">
                 <span><span class="kbd">↑</span><span class="kbd">↓</span> navigate</span>
                 <span><span class="kbd">↵</span> select</span>
+                ${hasRecents
+                  ? html`<span><span class="kbd">del</span> remove</span>`
+                  : nothing}
                 <span><span class="kbd">esc</span> clear</span>
               </span>
             </div>
@@ -187,6 +201,12 @@ export class UploadView extends LitElement {
         e.preventDefault();
         this.activateItem(this.activeIndex);
         break;
+      case 'Delete':
+      case 'Backspace':
+        if (this.removeActiveRecent()) {
+          e.preventDefault();
+        }
+        break;
       case 'Escape':
         e.preventDefault();
         this.activeIndex = 0;
@@ -209,6 +229,21 @@ export class UploadView extends LitElement {
       return;
     }
     this.pickerEl?.click();
+  }
+
+  private removeActiveRecent(): boolean {
+    const item = this.items[this.activeIndex];
+    if (!item || item.kind !== 'recent') return false;
+
+    this.dispatchEvent(
+      new CustomEvent<RecentRemoveRequestedDetail>('recent-remove-requested', {
+        detail: { sessionId: item.recent.sessionId },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    this.activeIndex = Math.min(this.activeIndex, this.items.length - 1);
+    return true;
   }
 
   private onDragOver = (e: DragEvent) => {

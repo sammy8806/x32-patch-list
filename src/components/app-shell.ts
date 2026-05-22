@@ -13,6 +13,7 @@ import './toolbar.js';
 import './patch-list.js';
 import './routing-visualizer.js';
 import type {
+  RecentRemoveRequestedDetail,
   RecentSelectedDetail,
   SceneSelectedDetail,
 } from './upload-view.js';
@@ -26,6 +27,7 @@ import {
   makeEmptyState,
   mergeRowTextComments,
   recentFiles,
+  removeSession,
   saveSession,
   sessionIdFor,
   type CommentMigrationSource,
@@ -66,6 +68,10 @@ export class AppShell extends LitElement {
 
     this.addEventListener('scene-selected', this.onSceneSelected as EventListener);
     this.addEventListener('recent-selected', this.onRecentSelected as EventListener);
+    this.addEventListener(
+      'recent-remove-requested',
+      this.onRecentRemoveRequested as EventListener,
+    );
     this.addEventListener('title-changed', this.onTitleChanged as EventListener);
     this.addEventListener('view-changed', this.onViewChanged as EventListener);
     this.addEventListener('sheet-notes-changed', this.onSheetNotesChanged as EventListener);
@@ -98,6 +104,10 @@ export class AppShell extends LitElement {
     super.disconnectedCallback();
     this.removeEventListener('scene-selected', this.onSceneSelected as EventListener);
     this.removeEventListener('recent-selected', this.onRecentSelected as EventListener);
+    this.removeEventListener(
+      'recent-remove-requested',
+      this.onRecentRemoveRequested as EventListener,
+    );
     this.removeEventListener('title-changed', this.onTitleChanged as EventListener);
     this.removeEventListener('view-changed', this.onViewChanged as EventListener);
     this.removeEventListener(
@@ -193,6 +203,13 @@ export class AppShell extends LitElement {
 
   private onRecentSelected = (e: CustomEvent<RecentSelectedDetail>) => {
     this.openStoredSession(e.detail.sessionId);
+  };
+
+  private onRecentRemoveRequested = (
+    e: CustomEvent<RecentRemoveRequestedDetail>,
+  ) => {
+    removeSession(e.detail.sessionId);
+    this.recentFilesList = recentFiles();
   };
 
   private onTitleChanged = (e: CustomEvent<string>) => {
