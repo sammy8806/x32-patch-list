@@ -615,7 +615,7 @@ export class RoutingVisualizer extends LitElement {
             : connectionKey(connection);
         this.lockedPins = [];
       });
-      applyWireHighlight(path, connection, this.activePinSet(), this.activeConnection());
+      applyWireHighlight(path, connection, this.activeTracePinSet(), this.activeConnection());
       svg.appendChild(path);
     }
   }
@@ -694,6 +694,11 @@ export class RoutingVisualizer extends LitElement {
     return new Set(this.lockedPins.length > 0 ? this.lockedPins : this.previewPins);
   }
 
+  private activeTracePinSet(): Set<string> {
+    if (!this.model || this.lockedPins.length === 0) return this.activePinSet();
+    return expandTracePins(this.model, new Set(this.lockedPins));
+  }
+
   private activeConnection(): string | null {
     return this.lockedConnection ?? this.previewConnection;
   }
@@ -703,7 +708,7 @@ export class RoutingVisualizer extends LitElement {
   }
 
   private isPinSetHighlighted(pins: string[]): boolean {
-    const active = this.activePinSet();
+    const active = this.activeTracePinSet();
     return active.size > 0 && pins.some((pin) => active.has(pin));
   }
 }
@@ -786,6 +791,44 @@ function applyWireHighlight(
 
   path.classList.toggle('active', active);
   path.classList.toggle('dimmed', (hasPinHighlight || hasConnectionHighlight) && !active);
+}
+
+function expandTracePins(
+  model: RoutingVisualModel,
+  selectedPins: Set<string>,
+): Set<string> {
+  if (selectedPins.size === 0) return selectedPins;
+
+  const adjacency = new Map<string, Set<string>>();
+  const connect = (a: string, b: string): void => {
+    (adjacency.get(a) ?? adjacency.set(a, new Set()).get(a)!).add(b);
+    (adjacency.get(b) ?? adjacency.set(b, new Set()).get(b)!).add(a);
+  };
+
+  for (const connection of model.connections) {
+    connect(connection.fromPin, connection.toPin);
+  }
+  for (const endpoint of model.processors) {
+    connect(processorInPin(endpoint.key), processorOutPin(endpoint.key));
+  }
+  for (const slot of model.userInputs) {
+    connect(userInPin(slot.key), userOutPin(slot.key));
+  }
+  for (const slot of model.userOutputs) {
+    connect(userInPin(slot.key), userOutPin(slot.key));
+  }
+
+  const visited = new Set<string>();
+  const queue = [...selectedPins];
+  while (queue.length > 0) {
+    const pin = queue.shift();
+    if (!pin || visited.has(pin)) continue;
+    visited.add(pin);
+    for (const next of adjacency.get(pin) ?? []) {
+      if (!visited.has(next)) queue.push(next);
+    }
+  }
+  return visited;
 }
 
 function samePins(a: string[], b: string[]): boolean {
